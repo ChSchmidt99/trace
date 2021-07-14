@@ -1,0 +1,140 @@
+package pt
+
+import (
+	"math"
+)
+
+type Intersection struct {
+	point     Vector3 // intersection Point
+	normal    Vector3 // normal at the intersection Point always pointing agains the ray
+	frontFace bool    // Wheter or not the ray hit from the outside or the inside
+	t         float64 // distance along the intersection ray
+	//material  Material     // Material at intersection point
+}
+
+type Intersectable interface {
+	intersected(ray *Ray, tMin, tMax float64) *Intersection
+}
+
+type Primitive interface {
+	Intersectable
+	transformed(t Matrix4) Primitive
+}
+
+type sphere struct {
+	center Vector3
+	radius float64
+}
+
+func newSphere(center Vector3, radius float64) *sphere {
+	return &sphere{
+		center: center,
+		radius: radius,
+	}
+}
+
+func (s *sphere) transformed(t Matrix4) Primitive {
+	// TODO: Implement Me!
+	return s
+}
+
+func (s *sphere) intersected(ray *Ray, tMin, tMax float64) *Intersection {
+	oc := ray.origin.Sub(s.center)
+	dirNorm := ray.direction.Length()
+	a := dirNorm * dirNorm
+	halfB := oc.Dot(ray.direction)
+	ocNorm := oc.Length()
+	c := ocNorm*ocNorm - s.radius*s.radius
+	discriminant := halfB*halfB - a*c
+	if discriminant < 0 {
+		return nil
+	}
+
+	// Nearest intersection distance within tMin <= t <= tMax
+	sqrtDiscriminant := math.Sqrt(discriminant)
+	interDistance := (-halfB - sqrtDiscriminant) / a
+	if interDistance <= tMin || interDistance >= tMax {
+		interDistance = (-halfB + sqrtDiscriminant) / a
+		if interDistance <= tMin || interDistance >= tMax {
+			return nil
+		}
+	}
+
+	intersectionPoint := ray.Position(interDistance)
+	normal := intersectionPoint.Sub(s.center).Mul(1 / s.radius)
+	frontFace := ray.direction.Dot(normal) < 0
+	if !frontFace {
+		normal = normal.Mul(-1)
+	}
+
+	return &Intersection{
+		point:     intersectionPoint,
+		normal:    normal,
+		frontFace: frontFace,
+		t:         interDistance,
+	}
+}
+
+type vertex struct {
+	position Vector3
+	normal   Vector3
+}
+
+type triangle struct {
+	vertecies [3]vertex
+
+	// Precalculate v0v1 and v0v2 as it's used
+	v0v1 Vector3
+	v0v2 Vector3
+}
+
+// Takes u and v barycentric coordinates and returns the normal at point p
+func (tri *triangle) normal(u, v float64) Vector3 {
+	normalW := tri.vertecies[0].normal.Mul(1 - u - v)
+	normalU := tri.vertecies[1].normal.Mul(u)
+	normalV := tri.vertecies[2].normal.Mul(v)
+	return normalU.Add(normalV).Add(normalW)
+}
+
+func (tri *triangle) intersected(ray *Ray, tMin, tMax float64) *Intersection {
+	// Implementation of the Möller-Trumbore algorithm
+	pvec := ray.direction.Cross(tri.v0v2)
+	det := tri.v0v1.Dot(pvec)
+
+	// If det is close to 0, Triangle and ray are parallel => no intersection
+	if ApproxZero(det) {
+		return nil
+	}
+
+	invDet := 1 / det
+	tvec := ray.origin.Sub(tri.vertecies[0].position)
+	u := tvec.Dot(pvec) * invDet
+	if u < 0 || u > 1 {
+		return nil
+	}
+
+	qvec := tvec.Cross(tri.v0v1)
+	v := ray.direction.Dot(qvec) * invDet
+	if v < 0 || u+v > 1 {
+		return nil
+	}
+
+	t := tri.v0v2.Dot(qvec) * invDet
+	if t < tMin || t > tMax {
+		return nil
+	}
+
+	intersectionPoint := ray.Position(t)
+	frontFacing := det > 0
+	normal := tri.normal(u, v)
+	if !frontFacing {
+		normal = normal.Mul(-1)
+	}
+
+	return &Intersection{
+		point:     intersectionPoint,
+		normal:    normal,
+		frontFace: frontFacing,
+		t:         t,
+	}
+}

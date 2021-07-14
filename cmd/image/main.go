@@ -1,0 +1,44 @@
+package main
+
+import (
+	. "github/chschmidt99/pt/pkg/pt"
+	"image"
+	"image/png"
+	"os"
+)
+
+func main() {
+	ar := 16.0 / 9
+	fov := 60.0
+	camera := NewCamera(ar, fov, CameraTransformation{
+		LookFrom: NewVector3(2, 2, 2),
+		LookAt:   NewVector3(0, 0, 0),
+		Up:       NewVector3(0, 1, 0),
+	})
+
+	scene := NewScene()
+	scene.Add(NewSceneNode(NewSphereMesh(NewVector3(0, 0, 0), 1)))
+	bvh := scene.Compile()
+
+	renderer := NewDefaultRenderer(bvh, camera)
+	buff := NewBufferAspect(200, ar)
+	renderer.RenderToBuffer(buff)
+	img := toImage(buff)
+	f, err := os.Create("test.png")
+	if err != nil {
+		panic(err)
+	}
+	png.Encode(f, img)
+}
+
+func toImage(buffer *Buffer) image.Image {
+	topLeft := image.Point{0, 0}
+	bottomRight := image.Point{buffer.Width, buffer.Height}
+	img := image.NewRGBA(image.Rectangle{topLeft, bottomRight})
+	for i, color := range buffer.Buff {
+		x := i % buffer.Width
+		y := i / buffer.Width
+		img.Set(x, y, GoColor(color))
+	}
+	return img
+}
