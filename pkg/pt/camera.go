@@ -53,27 +53,10 @@ func NewCamera(aspectRatio float64, fov float64, transform CameraTransformation)
 	return cam
 }
 
+// Cast ray in new direction, while keeping origin the same
 func (c *Camera) castRayReuse(s, t float64, ray *ray) {
-	// TODO: Check if reusing same origin improves performance
-	ray.reuse(c.orientation.origin, c.lowerLeftCorner.Add(c.horizontal.Mul(s)).Add(c.vertical.Mul(t)).Sub(c.orientation.origin))
+	ray.reuseSameOrigin(c.lowerLeftCorner.Add(c.horizontal.Mul(s)).Add(c.vertical.Mul(t)).Sub(c.orientation.origin))
 }
-
-/*
-// TODO: Split up camera movement and castray
-func (cam *Camera) translate(v Vector3) {
-	cam.orientation.origin = cam.orientation.origin.Add(v)
-	cam.lowerLeftCorner = cam.orientation.origin.Sub(cam.horizontal.Mul(0.5)).Sub(cam.vertical.Mul(0.5)).Sub(cam.orientation.w)
-}
-
-func (cam *Camera) setFront(v Vector3) {
-	cam.orientation.w = v.Unit()
-	cam.orientation.u = cam.orientation.up.Cross(cam.orientation.w).Unit()
-	cam.orientation.v = cam.orientation.w.Cross(cam.orientation.u)
-	cam.horizontal = cam.orientation.u.Mul(cam.viewportWidth)
-	cam.vertical = cam.orientation.v.Mul(cam.viewportHeight)
-	cam.lowerLeftCorner = cam.orientation.origin.Sub(cam.horizontal.Mul(0.5)).Sub(cam.vertical.Mul(0.5)).Sub(cam.orientation.w)
-}
-*/
 
 type ray struct {
 	origin    Vector3
@@ -133,6 +116,29 @@ func (r *ray) reuse(origin Vector3, direction Vector3) {
 
 	dirNormSq := direction.LengthSquared()
 	r.origin = origin
+	r.direction = direction
+	r.invDirection = invDirection
+	//r.unitDir = direction.Unit()
+	r.dirNormSquared = dirNormSq
+	r.sign = sign
+}
+
+// Creates a new ray by overriding the already allocated ray
+func (r *ray) reuseSameOrigin(direction Vector3) {
+	invDirection := direction.Inverse()
+	sign := [3]int{}
+
+	if invDirection.X < 0 {
+		sign[0] = 1
+	}
+	if invDirection.Y < 0 {
+		sign[1] = 1
+	}
+	if invDirection.Z < 0 {
+		sign[2] = 1
+	}
+
+	dirNormSq := direction.LengthSquared()
 	r.direction = direction
 	r.invDirection = invDirection
 	//r.unitDir = direction.Unit()

@@ -68,7 +68,10 @@ func (r *Renderer) RenderToBuffer(buff Buffer) {
 	height := buff.h()
 	for i := 0; i < r.numCPU; i++ {
 		go func(c context, w, h int) {
-			ray := ray{}
+			ray := ray{
+				// ATTENTION! When camera is moved, this origin needs to be changed too!
+				origin: r.camera.orientation.origin,
+			}
 			hit := hit{}
 			for y := range jobs {
 				for x := 0; x < w; x++ {

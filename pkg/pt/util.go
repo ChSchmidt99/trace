@@ -11,9 +11,8 @@ func ApproxZero(num float64) bool {
 	return num <= APPROX_THRESH
 }
 
-// Generate a random unit vector within a unit sphere
-func RandomUnitVector(r *rand.Rand) Vector3 {
-	// TODO: Use more efficient alogrithm
+// Deprecated, use RandomUnitVector instead
+func RandomUnitVectorOld(r *rand.Rand) Vector3 {
 	// First pick a random point in a unit cube, and skip it, if it's outside of the unit sphere
 	for {
 		v := NewRandomVector(-1, 1, r)
@@ -24,6 +23,21 @@ func RandomUnitVector(r *rand.Rand) Vector3 {
 	}
 }
 
+// Generate a random unit vector within a unit sphere
+func RandomUnitVector(r *rand.Rand) Vector3 {
+	u := r.Float64()
+	x1 := r.NormFloat64()
+	x2 := r.NormFloat64()
+	x3 := r.NormFloat64()
+	mag := math.Sqrt(x1*x1 + x2*x2 + x3*x3)
+	x1 /= mag
+	x2 /= mag
+	x3 /= mag
+	c := math.Cbrt(u)
+	return NewVector3(x1*c, x2*c, x3*c).Unit()
+}
+
+/*
 func RandomInUnitDisk(r *rand.Rand) Vector3 {
 	for {
 		v := NewVector3(RandFloat(-1, 1, r), RandFloat(-1, 1, r), 0)
@@ -33,6 +47,7 @@ func RandomInUnitDisk(r *rand.Rand) Vector3 {
 		return v
 	}
 }
+*/
 
 func RandFloat(min, max float64, r *rand.Rand) float64 {
 	return min + r.Float64()*(max-min)

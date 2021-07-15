@@ -19,7 +19,6 @@ type Diffuse struct {
 }
 
 func (d *Diffuse) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
-	// TODO: Revise random ray generation
 	scatterDirection := intersec.normal.Add(RandomUnitVector(r))
 	if scatterDirection.ApproxZero() {
 		scatterDirection = intersec.normal
