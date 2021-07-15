@@ -55,7 +55,6 @@ func NewDefaultRenderer(bvh BVH, camera *Camera) *Renderer {
 	}
 }
 
-// TODO: Check if it's faster to use renderContex ptr insted of value
 type context struct {
 	rand  *rand.Rand
 	depth int
@@ -65,17 +64,28 @@ func (r *Renderer) RenderToBuffer(buff Buffer) {
 	jobs := make(chan int)
 	wg := sync.WaitGroup{}
 	wg.Add(r.numCPU)
+	width := buff.w()
+	height := buff.h()
 	for i := 0; i < r.numCPU; i++ {
-		go func(c context) {
+		go func(c context, w, h int) {
+			ray := ray{}
 			for y := range jobs {
-				r.renderLine(c, y, buff)
+				for x := 0; x < w; x++ {
+					u := (float64(x) + c.rand.Float64()) / float64(w-1)
+					v := (float64(y) + c.rand.Float64()) / float64(h-1)
+					r.camera.castRayReuse(u, v, &ray)
+					if intersection := r.bvh.intersected(ray, 0.001, math.Inf(1)); intersection != nil {
+						buff.addSample(x, y, r.closest(r, c, ray, intersection))
+					} else {
+						buff.addSample(x, y, r.miss(r, c, ray))
+					}
+				}
 			}
 			wg.Done()
 		}(context{
 			rand: rand.New(rand.NewSource(time.Now().UnixNano())),
-		})
+		}, width, height)
 	}
-	height := buff.h()
 	// TODO: Check if doing spp per pixel instead of per image is better
 	for i := 0; i < r.spp; i++ {
 		for y := 0; y < height; y++ {
@@ -84,19 +94,4 @@ func (r *Renderer) RenderToBuffer(buff Buffer) {
 	}
 	close(jobs)
 	wg.Wait()
-}
-
-func (r *Renderer) renderLine(c context, y int, buffer Buffer) {
-	width := buffer.w()
-	height := buffer.h()
-	for x := 0; x < width; x++ {
-		u := (float64(x) + c.rand.Float64()) / float64(width-1)
-		v := (float64(y) + c.rand.Float64()) / float64(height-1)
-		ray := r.camera.castray(u, v)
-		if intersection := r.bvh.intersected(ray, 0.001, math.Inf(1)); intersection != nil {
-			buffer.addSample(x, y, r.closest(r, c, ray, intersection))
-		} else {
-			buffer.addSample(x, y, r.miss(r, c, ray))
-		}
-	}
 }

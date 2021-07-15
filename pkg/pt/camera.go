@@ -4,72 +4,6 @@ import (
 	"math"
 )
 
-type ray struct {
-	origin    Vector3
-	direction Vector3
-	//unitDir        Vector3 // TODO: unit dir used?
-	dirNormSquared float64
-
-	invDirection Vector3
-	sign         [3]int
-}
-
-func newRay(origin Vector3, direction Vector3) ray {
-	invDirection := direction.Inverse()
-	sign := [3]int{}
-
-	if invDirection.X < 0 {
-		sign[0] = 1
-	}
-	if invDirection.Y < 0 {
-		sign[1] = 1
-	}
-	if invDirection.Z < 0 {
-		sign[2] = 1
-	}
-
-	dirNormSq := direction.LengthSquared()
-
-	return ray{
-		origin:       origin,
-		direction:    direction,
-		invDirection: invDirection,
-		//unitDir:        direction.Unit(),
-		dirNormSquared: dirNormSq,
-		sign:           sign,
-	}
-}
-
-func (r *ray) Position(t float64) Vector3 {
-	magnitude := r.direction.Mul(t)
-	return r.origin.Add(magnitude)
-}
-
-// TODO: Benchmark wheter reusing or creating new ray is more efficient (also check value insted of pointer ray!)
-// Creates a new ray by overriding the already allocated ray
-func (r *ray) reuse(origin Vector3, direction Vector3) {
-	invDirection := direction.Inverse()
-	sign := [3]int{}
-
-	if invDirection.X < 0 {
-		sign[0] = 1
-	}
-	if invDirection.Y < 0 {
-		sign[1] = 1
-	}
-	if invDirection.Z < 0 {
-		sign[2] = 1
-	}
-
-	dirNormSq := direction.LengthSquared()
-	r.origin = origin
-	r.direction = direction
-	r.invDirection = invDirection
-	//r.unitDir = direction.Unit()
-	r.dirNormSquared = dirNormSq
-	r.sign = sign
-}
-
 type CameraTransformation struct {
 	LookFrom Vector3
 	LookAt   Vector3
@@ -119,8 +53,9 @@ func NewCamera(aspectRatio float64, fov float64, transform CameraTransformation)
 	return cam
 }
 
-func (c *Camera) castray(s, t float64) ray {
-	return newRay(c.orientation.origin, c.lowerLeftCorner.Add(c.horizontal.Mul(s)).Add(c.vertical.Mul(t)).Sub(c.orientation.origin))
+func (c *Camera) castRayReuse(s, t float64, ray *ray) {
+	// TODO: Check if reusing same origin improves performance
+	ray.reuse(c.orientation.origin, c.lowerLeftCorner.Add(c.horizontal.Mul(s)).Add(c.vertical.Mul(t)).Sub(c.orientation.origin))
 }
 
 /*
@@ -139,3 +74,68 @@ func (cam *Camera) setFront(v Vector3) {
 	cam.lowerLeftCorner = cam.orientation.origin.Sub(cam.horizontal.Mul(0.5)).Sub(cam.vertical.Mul(0.5)).Sub(cam.orientation.w)
 }
 */
+
+type ray struct {
+	origin    Vector3
+	direction Vector3
+	//unitDir        Vector3 // TODO: unit dir used?
+	dirNormSquared float64
+
+	invDirection Vector3
+	sign         [3]int
+}
+
+func newRay(origin Vector3, direction Vector3) ray {
+	invDirection := direction.Inverse()
+	sign := [3]int{}
+
+	if invDirection.X < 0 {
+		sign[0] = 1
+	}
+	if invDirection.Y < 0 {
+		sign[1] = 1
+	}
+	if invDirection.Z < 0 {
+		sign[2] = 1
+	}
+
+	dirNormSq := direction.LengthSquared()
+
+	return ray{
+		origin:       origin,
+		direction:    direction,
+		invDirection: invDirection,
+		//unitDir:        direction.Unit(),
+		dirNormSquared: dirNormSq,
+		sign:           sign,
+	}
+}
+
+func (r *ray) Position(t float64) Vector3 {
+	magnitude := r.direction.Mul(t)
+	return r.origin.Add(magnitude)
+}
+
+// Creates a new ray by overriding the already allocated ray
+func (r *ray) reuse(origin Vector3, direction Vector3) {
+	invDirection := direction.Inverse()
+	sign := [3]int{}
+
+	if invDirection.X < 0 {
+		sign[0] = 1
+	}
+	if invDirection.Y < 0 {
+		sign[1] = 1
+	}
+	if invDirection.Z < 0 {
+		sign[2] = 1
+	}
+
+	dirNormSq := direction.LengthSquared()
+	r.origin = origin
+	r.direction = direction
+	r.invDirection = invDirection
+	//r.unitDir = direction.Unit()
+	r.dirNormSquared = dirNormSq
+	r.sign = sign
+}
