@@ -93,12 +93,50 @@ type triangle struct {
 	v0v2 Vector3
 }
 
+func newTriangle(vertecies [3]vertex, material Material) *triangle {
+	return &triangle{
+		vertecies: vertecies,
+		mat:       material,
+		v0v1:      vertecies[1].position.Sub(vertecies[0].position),
+		v0v2:      vertecies[2].position.Sub(vertecies[0].position),
+	}
+}
+
+func newTriangleWithoutNormals(v0 Vector3, v1 Vector3, v2 Vector3, material Material) *triangle {
+	vertecies := [3]vertex{
+		{
+			position: v0,
+			normal:   calcNormal(v0, v1, v2),
+		},
+		{
+			position: v1,
+			normal:   calcNormal(v1, v2, v0),
+		},
+		{
+			position: v2,
+			normal:   calcNormal(v2, v0, v1),
+		},
+	}
+	return newTriangle(vertecies, material)
+}
+
+func calcNormal(point Vector3, right Vector3, left Vector3) Vector3 {
+	pa := left.Sub(point)
+	pb := right.Sub(point)
+	return pb.Cross(pa).Unit()
+}
+
 // Takes u and v barycentric coordinates and returns the normal at point p
 func (tri *triangle) normal(u, v float64) Vector3 {
 	normalW := tri.vertecies[0].normal.Mul(1 - u - v)
 	normalU := tri.vertecies[1].normal.Mul(u)
 	normalV := tri.vertecies[2].normal.Mul(v)
 	return normalU.Add(normalV).Add(normalW)
+}
+
+func (tri *triangle) transformed(t Matrix4) Primitive {
+	// TODO: Implement Me!
+	return tri
 }
 
 func (tri *triangle) intersected(ray *ray, tMin, tMax float64) *hit {

@@ -61,6 +61,11 @@ func NewSphereMesh(center Vector3, radius float64, material Material) *Mesh {
 	return newMesh(geo, nil)
 }
 
+func NewTriangleMesh(v0 Vector3, v1 Vector3, v2 Vector3, material Material) *Mesh {
+	geo := geometry{newTriangleWithoutNormals(v0, v1, v2, material)}
+	return newMesh(geo, nil)
+}
+
 func newMesh(geometry geometry, material Material) *Mesh {
 	return &Mesh{
 		transformation: IdentityMatrix(),

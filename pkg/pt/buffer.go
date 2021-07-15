@@ -1,6 +1,7 @@
 package pt
 
 import (
+	"image"
 	"image/color"
 	"math"
 )
@@ -63,4 +64,17 @@ func (b *PixelBuffer) h() int {
 
 func (b *PixelBuffer) w() int {
 	return b.Width
+}
+
+// TODO: only temporary, remove and write ImageBuffer instead
+func (b *PixelBuffer) ToImage() image.Image {
+	topLeft := image.Point{0, 0}
+	bottomRight := image.Point{b.Width, b.Height}
+	img := image.NewRGBA(image.Rectangle{topLeft, bottomRight})
+	for i, color := range b.Buff {
+		x := i % b.Width
+		y := b.Height - (i / b.Width)
+		img.Set(x, y, color.GoColor())
+	}
+	return img
 }
