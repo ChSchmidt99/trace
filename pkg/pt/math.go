@@ -11,6 +11,10 @@ func NewColor(r, g, b float64) Color {
 	return Color{r, g, b}
 }
 
+func (c1 Color) Blend(c2 Color) Color {
+	return Color{c1.X * c2.X, c1.Y * c2.Y, c1.Z * c2.Z}
+}
+
 type Vector3 struct {
 	X float64
 	Y float64

@@ -11,15 +11,20 @@ func main() {
 	ar := 16.0 / 9
 	fov := 60.0
 	camera := NewCamera(ar, fov, CameraTransformation{
-		LookFrom: NewVector3(2, 2, 2),
+		LookFrom: NewVector3(0, 2, 2),
 		LookAt:   NewVector3(0, 0, 0),
 		Up:       NewVector3(0, 1, 0),
 	})
-
 	scene := NewScene()
-	scene.Add(NewSceneNode(NewSphereMesh(NewVector3(0, 0, 0), 1)))
+	radius := .8
+	scene.Add(NewSceneNode(NewSphereMesh(NewVector3(1, 0, 0), radius, &Diffuse{
+		Albedo: NewColor(1, 0, 0),
+	})))
+	scene.Add(NewSceneNode(NewSphereMesh(NewVector3(-1, 0, 0), radius, &Reflective{
+		Albedo:    NewColor(0, 0, 1),
+		Diffusion: 0,
+	})))
 	bvh := scene.Compile()
-
 	renderer := NewDefaultRenderer(bvh, camera)
 	buff := NewBufferAspect(200, ar)
 	renderer.RenderToBuffer(buff)

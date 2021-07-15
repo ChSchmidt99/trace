@@ -56,8 +56,8 @@ type Mesh struct {
 	//material       Material
 }
 
-func NewSphereMesh(center Vector3, radius float64) *Mesh {
-	geo := geometry{newSphere(center, radius)}
+func NewSphereMesh(center Vector3, radius float64, material Material) *Mesh {
+	geo := geometry{newSphere(center, radius, material)}
 	return newMesh(geo, nil)
 }
 

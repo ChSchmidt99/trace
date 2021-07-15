@@ -14,7 +14,7 @@ func NewBVH(prims []Primitive) BVH {
 	}
 }
 
-func (bvh *BVH) intersected(ray *Ray, tMin, tMax float64) *Intersection {
+func (bvh *BVH) intersected(ray *ray, tMin, tMax float64) *hit {
 	return bvh.root.intersected(ray, tMin, tMax)
 }
 
@@ -22,9 +22,9 @@ type bvhNode struct {
 	prims []Primitive
 }
 
-func (node *bvhNode) intersected(ray *Ray, tMin, tMax float64) *Intersection {
+func (node *bvhNode) intersected(ray *ray, tMin, tMax float64) *hit {
 	closest := tMax
-	var record *Intersection
+	var record *hit
 	for _, prim := range node.prims {
 		if hit := prim.intersected(ray, tMin, closest); hit != nil {
 			closest = hit.t

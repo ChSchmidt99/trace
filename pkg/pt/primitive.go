@@ -4,16 +4,16 @@ import (
 	"math"
 )
 
-type Intersection struct {
-	point     Vector3 // intersection Point
-	normal    Vector3 // normal at the intersection Point always pointing agains the ray
-	frontFace bool    // Wheter or not the ray hit from the outside or the inside
-	t         float64 // distance along the intersection ray
-	//material  Material     // Material at intersection point
+type hit struct {
+	point     Vector3  // intersection Point
+	normal    Vector3  // normal at the intersection Point always pointing agains the ray
+	frontFace bool     // Wheter or not the ray hit from the outside or the inside
+	t         float64  // distance along the intersection ray
+	material  Material // Material at intersection point
 }
 
 type Intersectable interface {
-	intersected(ray *Ray, tMin, tMax float64) *Intersection
+	intersected(ray *ray, tMin, tMax float64) *hit
 }
 
 type Primitive interface {
@@ -21,15 +21,18 @@ type Primitive interface {
 	transformed(t Matrix4) Primitive
 }
 
+// TODO: Is there a better way, than to add mat to primitives?
 type sphere struct {
 	center Vector3
 	radius float64
+	mat    Material
 }
 
-func newSphere(center Vector3, radius float64) *sphere {
+func newSphere(center Vector3, radius float64, material Material) *sphere {
 	return &sphere{
 		center: center,
 		radius: radius,
+		mat:    material,
 	}
 }
 
@@ -38,7 +41,7 @@ func (s *sphere) transformed(t Matrix4) Primitive {
 	return s
 }
 
-func (s *sphere) intersected(ray *Ray, tMin, tMax float64) *Intersection {
+func (s *sphere) intersected(ray *ray, tMin, tMax float64) *hit {
 	oc := ray.origin.Sub(s.center)
 	dirNorm := ray.direction.Length()
 	a := dirNorm * dirNorm
@@ -67,11 +70,12 @@ func (s *sphere) intersected(ray *Ray, tMin, tMax float64) *Intersection {
 		normal = normal.Mul(-1)
 	}
 
-	return &Intersection{
+	return &hit{
 		point:     intersectionPoint,
 		normal:    normal,
 		frontFace: frontFace,
 		t:         interDistance,
+		material:  s.mat,
 	}
 }
 
@@ -82,6 +86,7 @@ type vertex struct {
 
 type triangle struct {
 	vertecies [3]vertex
+	mat       Material
 
 	// Precalculate v0v1 and v0v2 as it's used
 	v0v1 Vector3
@@ -96,7 +101,7 @@ func (tri *triangle) normal(u, v float64) Vector3 {
 	return normalU.Add(normalV).Add(normalW)
 }
 
-func (tri *triangle) intersected(ray *Ray, tMin, tMax float64) *Intersection {
+func (tri *triangle) intersected(ray *ray, tMin, tMax float64) *hit {
 	// Implementation of the Möller-Trumbore algorithm
 	pvec := ray.direction.Cross(tri.v0v2)
 	det := tri.v0v1.Dot(pvec)
@@ -131,10 +136,11 @@ func (tri *triangle) intersected(ray *Ray, tMin, tMax float64) *Intersection {
 		normal = normal.Mul(-1)
 	}
 
-	return &Intersection{
+	return &hit{
 		point:     intersectionPoint,
 		normal:    normal,
 		frontFace: frontFacing,
 		t:         t,
+		material:  tri.mat,
 	}
 }
