@@ -13,7 +13,7 @@ type hit struct {
 }
 
 type Intersectable interface {
-	intersected(ray *ray, tMin, tMax float64) *hit
+	intersected(ray ray, tMin, tMax float64) *hit
 }
 
 type Primitive interface {
@@ -41,7 +41,7 @@ func (s *sphere) transformed(t Matrix4) Primitive {
 	return s
 }
 
-func (s *sphere) intersected(ray *ray, tMin, tMax float64) *hit {
+func (s *sphere) intersected(ray ray, tMin, tMax float64) *hit {
 	oc := ray.origin.Sub(s.center)
 	dirNorm := ray.direction.Length()
 	a := dirNorm * dirNorm
@@ -139,7 +139,7 @@ func (tri *triangle) transformed(t Matrix4) Primitive {
 	return tri
 }
 
-func (tri *triangle) intersected(ray *ray, tMin, tMax float64) *hit {
+func (tri *triangle) intersected(ray ray, tMin, tMax float64) *hit {
 	// Implementation of the Möller-Trumbore algorithm
 	pvec := ray.direction.Cross(tri.v0v2)
 	det := tri.v0v1.Dot(pvec)

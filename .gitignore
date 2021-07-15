@@ -14,6 +14,9 @@
 # Rendered images
 *.png
 
+# Benchmark files for now
+*.txt
+
 # All profiles outside benchmarks/ directory 
 *.prof
 !benchmarks/*.prof

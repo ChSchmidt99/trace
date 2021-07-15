@@ -5,16 +5,16 @@ import (
 )
 
 type ray struct {
-	origin         Vector3
-	direction      Vector3
-	unitDir        Vector3 // TODO: only use unitDir?
+	origin    Vector3
+	direction Vector3
+	//unitDir        Vector3 // TODO: unit dir used?
 	dirNormSquared float64
 
 	invDirection Vector3
 	sign         [3]int
 }
 
-func newray(origin Vector3, direction Vector3) *ray {
+func newRay(origin Vector3, direction Vector3) ray {
 	invDirection := direction.Inverse()
 	sign := [3]int{}
 
@@ -30,11 +30,11 @@ func newray(origin Vector3, direction Vector3) *ray {
 
 	dirNormSq := direction.LengthSquared()
 
-	return &ray{
-		origin:         origin,
-		direction:      direction,
-		invDirection:   invDirection,
-		unitDir:        direction.Unit(),
+	return ray{
+		origin:       origin,
+		direction:    direction,
+		invDirection: invDirection,
+		//unitDir:        direction.Unit(),
 		dirNormSquared: dirNormSq,
 		sign:           sign,
 	}
@@ -47,7 +47,7 @@ func (r *ray) Position(t float64) Vector3 {
 
 // TODO: Benchmark wheter reusing or creating new ray is more efficient (also check value insted of pointer ray!)
 // Creates a new ray by overriding the already allocated ray
-func (r *ray) reuse(origin Vector3, direction Vector3) *ray {
+func (r *ray) reuse(origin Vector3, direction Vector3) {
 	invDirection := direction.Inverse()
 	sign := [3]int{}
 
@@ -65,10 +65,9 @@ func (r *ray) reuse(origin Vector3, direction Vector3) *ray {
 	r.origin = origin
 	r.direction = direction
 	r.invDirection = invDirection
-	r.unitDir = direction.Unit()
+	//r.unitDir = direction.Unit()
 	r.dirNormSquared = dirNormSq
 	r.sign = sign
-	return r
 }
 
 type CameraTransformation struct {
@@ -120,8 +119,8 @@ func NewCamera(aspectRatio float64, fov float64, transform CameraTransformation)
 	return cam
 }
 
-func (c *Camera) castray(s, t float64) *ray {
-	return newray(c.orientation.origin, c.lowerLeftCorner.Add(c.horizontal.Mul(s)).Add(c.vertical.Mul(t)).Sub(c.orientation.origin))
+func (c *Camera) castray(s, t float64) ray {
+	return newRay(c.orientation.origin, c.lowerLeftCorner.Add(c.horizontal.Mul(s)).Add(c.vertical.Mul(t)).Sub(c.orientation.origin))
 }
 
 /*

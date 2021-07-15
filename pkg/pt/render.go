@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-type ClosestHitShader func(*Renderer, context, *ray, *hit) Color
+type ClosestHitShader func(*Renderer, context, ray, *hit) Color
 
-func DefaultClosestHitShader(renderer *Renderer, c context, r *ray, h *hit) Color {
+func DefaultClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color {
 	if c.depth > renderer.maxDepth {
 		return NewColor(1, 1, 1)
 	}
@@ -27,9 +27,9 @@ func DefaultClosestHitShader(renderer *Renderer, c context, r *ray, h *hit) Colo
 	}
 }
 
-type MissShader func(*Renderer, context, *ray) Color
+type MissShader func(*Renderer, context, ray) Color
 
-func DefaultMissShader(renderer *Renderer, c context, r *ray) Color {
+func DefaultMissShader(renderer *Renderer, c context, r ray) Color {
 	return NewColor(1, 1, 1)
 }
 

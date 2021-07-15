@@ -6,26 +6,27 @@ import (
 )
 
 type scatterResult struct {
-	scattered   *ray
+	scattered   ray
 	attenuation Color
 }
 
 type Material interface {
-	scatter(*ray, *hit, *rand.Rand) (bool, *scatterResult)
+	scatter(ray, *hit, *rand.Rand) (bool, *scatterResult)
 }
 
 type Diffuse struct {
 	Albedo Color
 }
 
-func (d *Diffuse) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, *scatterResult) {
+func (d *Diffuse) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, *scatterResult) {
 	// TODO: Revise random ray generation
 	scatterDirection := intersec.normal.Add(RandomUnitVector(r))
 	if scatterDirection.ApproxZero() {
 		scatterDirection = intersec.normal
 	}
+	ray.reuse(intersec.point, scatterDirection)
 	result := &scatterResult{
-		scattered:   ray.reuse(intersec.point, scatterDirection),
+		scattered:   ray,
 		attenuation: d.Albedo,
 	}
 	return true, result
@@ -36,10 +37,11 @@ type Reflective struct {
 	Diffusion float64 // diffusion in range [0,1]
 }
 
-func (d *Reflective) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, *scatterResult) {
+func (d *Reflective) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, *scatterResult) {
 	reflected := reflect(ray.direction.Unit(), intersec.normal)
+	ray.reuse(intersec.point, reflected.Add(RandomUnitVector(r).Mul(d.Diffusion)))
 	result := &scatterResult{
-		scattered:   ray.reuse(intersec.point, reflected.Add(RandomUnitVector(r).Mul(d.Diffusion))),
+		scattered:   ray,
 		attenuation: d.Albedo,
 	}
 	return reflected.Dot(intersec.normal) > 0, result
@@ -50,7 +52,7 @@ type Refractive struct {
 	Ratio  float64
 }
 
-func (d *Refractive) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, *scatterResult) {
+func (d *Refractive) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, *scatterResult) {
 	defractionRatio := d.Ratio
 	if intersec.frontFace {
 		defractionRatio = 1 / d.Ratio
@@ -68,9 +70,9 @@ func (d *Refractive) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, *scat
 	} else {
 		direction = refract(unitDir, intersec.normal, defractionRatio)
 	}
-
+	ray.reuse(intersec.point, direction)
 	return true, &scatterResult{
-		scattered:   ray.reuse(intersec.point, direction),
+		scattered:   ray,
 		attenuation: d.Albedo,
 	}
 }

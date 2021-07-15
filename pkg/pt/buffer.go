@@ -6,7 +6,6 @@ import (
 	"math"
 )
 
-// TODO: Check if struct would be faster than interface
 type Buffer interface {
 	addSample(x, y int, c Color)
 	w() int
