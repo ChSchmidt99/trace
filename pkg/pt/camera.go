@@ -111,7 +111,7 @@ func newRay(origin Vector3, direction Vector3) ray {
 	}
 }
 
-func (r *ray) Position(t float64) Vector3 {
+func (r ray) Position(t float64) Vector3 {
 	magnitude := r.direction.Mul(t)
 	return r.origin.Add(magnitude)
 }

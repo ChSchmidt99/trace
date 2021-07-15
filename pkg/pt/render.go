@@ -17,11 +17,11 @@ func DefaultClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color
 	c.depth++
 	// If material scatters, compute intersections with scattered ray and then call itself recursively
 	if b, result := h.material.scatter(r, h, c.rand); b {
-		hit := renderer.bvh.intersected(result.scattered, 0.001, math.Inf(1))
-		if hit == nil {
+		if renderer.bvh.intersected(result.scattered, 0.001, math.Inf(1), h) {
+			return renderer.closest(renderer, c, result.scattered, h).Blend(result.attenuation)
+		} else {
 			return renderer.miss(renderer, c, result.scattered).Blend(result.attenuation)
 		}
-		return renderer.closest(renderer, c, result.scattered, hit).Blend(result.attenuation)
 	} else {
 		return result.attenuation
 	}
@@ -69,13 +69,14 @@ func (r *Renderer) RenderToBuffer(buff Buffer) {
 	for i := 0; i < r.numCPU; i++ {
 		go func(c context, w, h int) {
 			ray := ray{}
+			hit := hit{}
 			for y := range jobs {
 				for x := 0; x < w; x++ {
 					u := (float64(x) + c.rand.Float64()) / float64(w-1)
 					v := (float64(y) + c.rand.Float64()) / float64(h-1)
 					r.camera.castRayReuse(u, v, &ray)
-					if intersection := r.bvh.intersected(ray, 0.001, math.Inf(1)); intersection != nil {
-						buff.addSample(x, y, r.closest(r, c, ray, intersection))
+					if r.bvh.intersected(ray, 0.001, math.Inf(1), &hit) {
+						buff.addSample(x, y, r.closest(r, c, ray, &hit))
 					} else {
 						buff.addSample(x, y, r.miss(r, c, ray))
 					}

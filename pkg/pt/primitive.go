@@ -13,7 +13,7 @@ type hit struct {
 }
 
 type Intersectable interface {
-	intersected(ray ray, tMin, tMax float64) *hit
+	intersected(ray ray, tMin, tMax float64, hitOut *hit) bool
 }
 
 type Primitive interface {
@@ -41,7 +41,7 @@ func (s *sphere) transformed(t Matrix4) Primitive {
 	return s
 }
 
-func (s *sphere) intersected(ray ray, tMin, tMax float64) *hit {
+func (s *sphere) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	oc := ray.origin.Sub(s.center)
 	dirNorm := ray.direction.Length()
 	a := dirNorm * dirNorm
@@ -50,33 +50,28 @@ func (s *sphere) intersected(ray ray, tMin, tMax float64) *hit {
 	c := ocNorm*ocNorm - s.radius*s.radius
 	discriminant := halfB*halfB - a*c
 	if discriminant < 0 {
-		return nil
+		return false
 	}
 
 	// Nearest intersection distance within tMin <= t <= tMax
 	sqrtDiscriminant := math.Sqrt(discriminant)
-	interDistance := (-halfB - sqrtDiscriminant) / a
-	if interDistance <= tMin || interDistance >= tMax {
-		interDistance = (-halfB + sqrtDiscriminant) / a
-		if interDistance <= tMin || interDistance >= tMax {
-			return nil
+	t := (-halfB - sqrtDiscriminant) / a
+	if t <= tMin || t >= tMax {
+		t = (-halfB + sqrtDiscriminant) / a
+		if t <= tMin || t >= tMax {
+			return false
 		}
 	}
 
-	intersectionPoint := ray.Position(interDistance)
-	normal := intersectionPoint.Sub(s.center).Mul(1 / s.radius)
-	frontFace := ray.direction.Dot(normal) < 0
-	if !frontFace {
-		normal = normal.Mul(-1)
+	hitOut.point = ray.Position(t)
+	hitOut.normal = hitOut.point.Sub(s.center).Mul(1 / s.radius)
+	hitOut.frontFace = ray.direction.Dot(hitOut.normal) < 0
+	if !hitOut.frontFace {
+		hitOut.normal = hitOut.normal.Mul(-1)
 	}
-
-	return &hit{
-		point:     intersectionPoint,
-		normal:    normal,
-		frontFace: frontFace,
-		t:         interDistance,
-		material:  s.mat,
-	}
+	hitOut.t = t
+	hitOut.material = s.mat
+	return true
 }
 
 type vertex struct {
@@ -139,46 +134,41 @@ func (tri *triangle) transformed(t Matrix4) Primitive {
 	return tri
 }
 
-func (tri *triangle) intersected(ray ray, tMin, tMax float64) *hit {
+func (tri *triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	// Implementation of the Möller-Trumbore algorithm
 	pvec := ray.direction.Cross(tri.v0v2)
 	det := tri.v0v1.Dot(pvec)
 
 	// If det is close to 0, Triangle and ray are parallel => no intersection
 	if ApproxZero(det) {
-		return nil
+		return false
 	}
 
 	invDet := 1 / det
 	tvec := ray.origin.Sub(tri.vertecies[0].position)
 	u := tvec.Dot(pvec) * invDet
 	if u < 0 || u > 1 {
-		return nil
+		return false
 	}
 
 	qvec := tvec.Cross(tri.v0v1)
 	v := ray.direction.Dot(qvec) * invDet
 	if v < 0 || u+v > 1 {
-		return nil
+		return false
 	}
 
 	t := tri.v0v2.Dot(qvec) * invDet
 	if t < tMin || t > tMax {
-		return nil
+		return false
 	}
 
-	intersectionPoint := ray.Position(t)
-	frontFacing := det > 0
-	normal := tri.normal(u, v)
-	if !frontFacing {
-		normal = normal.Mul(-1)
+	hitOut.point = ray.Position(t)
+	hitOut.frontFace = det > 0
+	hitOut.normal = tri.normal(u, v)
+	if !hitOut.frontFace {
+		hitOut.normal = hitOut.normal.Mul(-1)
 	}
-
-	return &hit{
-		point:     intersectionPoint,
-		normal:    normal,
-		frontFace: frontFacing,
-		t:         t,
-		material:  tri.mat,
-	}
+	hitOut.t = t
+	hitOut.material = tri.mat
+	return true
 }

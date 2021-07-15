@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Using Ray call by value insted of pointer for perfomance increase
 - Reusing Rays when scattering and casting new rays from camera for performance increase
 - Return scatter result as struct for performance increase
+- Hit records are now a c style out variable to save allocs
 
 ## [0.0.1] - 2021-07-15
 ### Added 
