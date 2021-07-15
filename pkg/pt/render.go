@@ -36,6 +36,7 @@ func DefaultMissShader(renderer *Renderer, c context, r *ray) Color {
 type Renderer struct {
 	numCPU   int
 	maxDepth int
+	spp      int
 	bvh      BVH
 	camera   *Camera
 	closest  ClosestHitShader
@@ -47,6 +48,7 @@ func NewDefaultRenderer(bvh BVH, camera *Camera) *Renderer {
 		numCPU:   runtime.GOMAXPROCS(0),
 		maxDepth: 5,
 		bvh:      bvh,
+		spp:      100,
 		camera:   camera,
 		closest:  DefaultClosestHitShader,
 		miss:     DefaultMissShader,
@@ -59,8 +61,7 @@ type context struct {
 	depth int
 }
 
-// Render to a buffer that is already allocated in the correct size
-func (r *Renderer) RenderToBuffer(buff *Buffer) {
+func (r *Renderer) RenderToBuffer(buff Buffer) {
 	jobs := make(chan int)
 	wg := sync.WaitGroup{}
 	wg.Add(r.numCPU)
@@ -74,22 +75,28 @@ func (r *Renderer) RenderToBuffer(buff *Buffer) {
 			rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 		})
 	}
-	for y := 0; y < buff.Height; y++ {
-		jobs <- y
+	height := buff.h()
+	// TODO: Check if doing spp per pixel instead of per image is better
+	for i := 0; i < r.spp; i++ {
+		for y := 0; y < height; y++ {
+			jobs <- y
+		}
 	}
 	close(jobs)
 	wg.Wait()
 }
 
-func (r *Renderer) renderLine(c context, y int, buffer *Buffer) {
-	for x := 0; x < buffer.Width; x++ {
-		u := (float64(x) + c.rand.Float64()) / float64(buffer.Width-1)
-		v := (float64(y) + c.rand.Float64()) / float64(buffer.Height-1)
+func (r *Renderer) renderLine(c context, y int, buffer Buffer) {
+	width := buffer.w()
+	height := buffer.h()
+	for x := 0; x < width; x++ {
+		u := (float64(x) + c.rand.Float64()) / float64(width-1)
+		v := (float64(y) + c.rand.Float64()) / float64(height-1)
 		ray := r.camera.castray(u, v)
 		if intersection := r.bvh.intersected(ray, 0.001, math.Inf(1)); intersection != nil {
-			buffer.setPixel(x, y, r.closest(r, c, ray, intersection))
+			buffer.addSample(x, y, r.closest(r, c, ray, intersection))
 		} else {
-			buffer.setPixel(x, y, r.miss(r, c, ray))
+			buffer.addSample(x, y, r.miss(r, c, ray))
 		}
 	}
 }

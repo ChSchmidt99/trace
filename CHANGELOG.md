@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Minimal renderer
 - Sphere and Triangle primitive
 - Diffuse, reflective and refractive material
+- Render multiple samples per pixel
 
 ## [0.0.1] - 2021-07-13
 ### Added 

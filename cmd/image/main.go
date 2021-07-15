@@ -36,14 +36,14 @@ func main() {
 	png.Encode(f, img)
 }
 
-func toImage(buffer *Buffer) image.Image {
+func toImage(buffer *PixelBuffer) image.Image {
 	topLeft := image.Point{0, 0}
 	bottomRight := image.Point{buffer.Width, buffer.Height}
 	img := image.NewRGBA(image.Rectangle{topLeft, bottomRight})
 	for i, color := range buffer.Buff {
 		x := i % buffer.Width
 		y := i / buffer.Width
-		img.Set(x, y, GoColor(color))
+		img.Set(x, y, color.GoColor())
 	}
 	return img
 }

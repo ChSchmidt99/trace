@@ -15,6 +15,18 @@ func (c1 Color) Blend(c2 Color) Color {
 	return Color{c1.X * c2.X, c1.Y * c2.Y, c1.Z * c2.Z}
 }
 
+func (c1 Color) Add(c2 Color) Color {
+	return Color{c1.X + c2.X, c1.Y + c2.Y, c1.Z + c2.Z}
+}
+
+func (c1 Color) Sub(c2 Color) Color {
+	return Color{c1.X - c2.X, c1.Y - c2.Y, c1.Z - c2.Z}
+}
+
+func (c Color) Div(n float64) Color {
+	return Color{c.X / n, c.Y / n, c.Z / n}
+}
+
 type Vector3 struct {
 	X float64
 	Y float64

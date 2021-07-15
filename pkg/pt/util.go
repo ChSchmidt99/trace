@@ -1,7 +1,6 @@
 package pt
 
 import (
-	"image/color"
 	"math"
 	"math/rand"
 )
@@ -37,14 +36,6 @@ func RandomInUnitDisk(r *rand.Rand) Vector3 {
 
 func RandFloat(min, max float64, r *rand.Rand) float64 {
 	return min + r.Float64()*(max-min)
-}
-
-// Convert to image color and also Gamma correct for gamma=2.0
-func GoColor(vec Color) color.Color {
-	r := math.Sqrt(vec.X)
-	g := math.Sqrt(vec.Y)
-	b := math.Sqrt(vec.Z)
-	return color.RGBA{R: uint8(Clamp(r, 0.0, 1.0) * 255), G: uint8(Clamp(g, 0.0, 1.0) * 255), B: uint8(Clamp(b, 0.0, 1.0) * 255), A: 255}
 }
 
 func Clamp(value, min, max float64) float64 {
