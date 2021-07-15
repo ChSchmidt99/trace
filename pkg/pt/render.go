@@ -61,7 +61,7 @@ type context struct {
 }
 
 func (r *Renderer) RenderToBuffer(buff Buffer) {
-	jobs := make(chan int)
+	jobs := make(chan int, buff.h())
 	wg := sync.WaitGroup{}
 	wg.Add(r.numCPU)
 	width := buff.w()

@@ -25,8 +25,8 @@ type bvhNode struct {
 func (node *bvhNode) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	closest := tMax
 	didHit := false
-	for _, prim := range node.prims {
-		if prim.intersected(ray, tMin, closest, hitOut) {
+	for i := 0; i < len(node.prims); i++ {
+		if node.prims[i].intersected(ray, tMin, closest, hitOut) {
 			didHit = true
 			closest = hitOut.t
 		}

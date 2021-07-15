@@ -19,8 +19,6 @@
 
 # All profiles outside benchmarks/ directory 
 *.prof
-!benchmarks/*.prof
-!benchmarks/*.txt
 
 assets/local
 
