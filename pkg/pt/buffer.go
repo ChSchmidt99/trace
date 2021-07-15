@@ -53,6 +53,7 @@ func NewBuffer(width, height int) *PixelBuffer {
 	}
 }
 
+// TODO: Check if addSample blocks!
 func (b *PixelBuffer) addSample(x, y int, c Color) {
 	b.Buff[y*b.Width+x].addSample(c)
 }
