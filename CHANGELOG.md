@@ -5,10 +5,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- added axis-aligned bounding box
+- added bounding volume hierarchy traversal
 
 ## [0.0.2] - 2021-07-15
 ### Changed
-- Using Ray call by value insted of pointer for perfomance increase
+- Using Ray call by value instead of pointer for performance increase
 - Reusing Rays when scattering and casting new rays from camera for performance increase
 - Return scatter result as struct for performance increase
 - Hit records are now a c style out variable to save allocs

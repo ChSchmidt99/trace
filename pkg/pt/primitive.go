@@ -14,6 +14,7 @@ type hit struct {
 
 type Intersectable interface {
 	intersected(ray ray, tMin, tMax float64, hitOut *hit) bool
+	bounding() aabb
 }
 
 type Primitive interface {
@@ -39,6 +40,14 @@ func newSphere(center Vector3, radius float64, material Material) *sphere {
 func (s *sphere) transformed(t Matrix4) Primitive {
 	// TODO: Implement Me!
 	return s
+}
+
+func (s *sphere) bounding() aabb {
+	// TODO: Cache!
+	radVec := NewVector3(s.radius, s.radius, s.radius)
+	min := s.center.Sub(radVec)
+	max := s.center.Add(radVec)
+	return newAABB(min, max)
 }
 
 func (s *sphere) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
@@ -119,6 +128,16 @@ func calcNormal(point Vector3, right Vector3, left Vector3) Vector3 {
 	pa := left.Sub(point)
 	pb := right.Sub(point)
 	return pb.Cross(pa).Unit()
+}
+
+func (t *triangle) bounding() aabb {
+	// TODO: Cache!
+	x := [3]float64{t.vertecies[0].position.X, t.vertecies[1].position.X, t.vertecies[2].position.X}
+	y := [3]float64{t.vertecies[0].position.Y, t.vertecies[1].position.Y, t.vertecies[2].position.Y}
+	z := [3]float64{t.vertecies[0].position.Z, t.vertecies[1].position.Z, t.vertecies[2].position.Z}
+	min := NewVector3(Min3(x), Min3(y), Min3(z))
+	max := NewVector3(Max3(x), Max3(y), Max3(z))
+	return newAABB(min, max)
 }
 
 // Takes u and v barycentric coordinates and returns the normal at point p

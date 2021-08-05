@@ -88,3 +88,37 @@ func Max3(vals [3]float64) float64 {
 	}
 	return vals[2]
 }
+
+// Calculates a vector with the minimum components of a and b combined
+func MinVec(a Vector3, b Vector3) Vector3 {
+	x := a.X
+	if a.X > b.X {
+		x = b.X
+	}
+	y := a.Y
+	if a.Y > b.Y {
+		y = b.Y
+	}
+	z := a.Z
+	if a.Z > b.Z {
+		z = b.Z
+	}
+	return NewVector3(x, y, z)
+}
+
+// Calculates a vector with the maximum components of a and b combined
+func MaxVec(a Vector3, b Vector3) Vector3 {
+	x := a.X
+	if a.X < b.X {
+		x = b.X
+	}
+	y := a.Y
+	if a.Y < b.Y {
+		y = b.Y
+	}
+	z := a.Z
+	if a.Z < b.Z {
+		z = b.Z
+	}
+	return NewVector3(x, y, z)
+}
