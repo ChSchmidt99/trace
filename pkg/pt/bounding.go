@@ -26,6 +26,16 @@ func enclosing(primitives []Primitive) aabb {
 	return enclosing
 }
 
+func enclosingSlice(indeces []int, primitives []Primitive) aabb {
+	enclosing := primitives[indeces[0]].bounding()
+	for i := 1; i < len(indeces); i++ {
+		prim := primitives[indeces[i]]
+		enclosing.add(prim.bounding())
+	}
+	enclosing.update()
+	return enclosing
+}
+
 func (bounding *aabb) update() {
 	min := bounding.bounds[0]
 	max := bounding.bounds[1]
