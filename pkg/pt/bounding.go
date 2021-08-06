@@ -2,13 +2,19 @@ package pt
 
 // TODO: Compare to pointer aabb
 type aabb struct {
-	bounds [2]Vector3 // bounds[0] = min, bounds[1] = max
+	bounds     [2]Vector3 // bounds[0] = min, bounds[1] = max
+	width      float64
+	height     float64
+	depth      float64
+	barycenter Vector3
 }
 
 func newAABB(min, max Vector3) aabb {
-	return aabb{
+	bouding := aabb{
 		bounds: [2]Vector3{min, max},
 	}
+	bouding.update()
+	return bouding
 }
 
 func enclosing(primitives []Primitive) aabb {
@@ -16,7 +22,17 @@ func enclosing(primitives []Primitive) aabb {
 	for i := 1; i < len(primitives); i++ {
 		enclosing = enclosing.add(primitives[i].bounding())
 	}
+	enclosing.update()
 	return enclosing
+}
+
+func (bounding *aabb) update() {
+	min := bounding.bounds[0]
+	max := bounding.bounds[1]
+	bounding.barycenter = min.Add(max).Mul(1.0 / 2.0)
+	bounding.width = max.X - min.X
+	bounding.height = max.Y - min.Y
+	bounding.depth = max.Z - min.Z
 }
 
 func (a aabb) add(b aabb) aabb {
