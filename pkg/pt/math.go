@@ -125,6 +125,7 @@ func (p Vector4) Transformed(m Matrix4) Vector4 {
 }
 
 // 4x4 Matrix [y][x], [row][column]
+// TODO: Try and compare [16]float64 Matrix
 type Matrix4 struct {
 	values [4][4]float64
 }
@@ -150,6 +151,155 @@ func (m Matrix4) Multiply(v Vector4) Vector4 {
 		result[i] = sum
 	}
 	return Vector4{x: result[0], y: result[1], z: result[2], w: result[3]}
+}
+
+func (m1 Matrix4) Inverse() Matrix4 {
+	var inv [16]float64
+	m := [16]float64{
+		m1.values[0][0], m1.values[0][1], m1.values[0][2], m1.values[0][3],
+		m1.values[1][0], m1.values[1][1], m1.values[1][2], m1.values[1][3],
+		m1.values[2][0], m1.values[2][1], m1.values[2][2], m1.values[2][3],
+		m1.values[3][0], m1.values[3][1], m1.values[3][2], m1.values[3][3],
+	}
+
+	inv[0] = m[5]*m[10]*m[15] -
+		m[5]*m[11]*m[14] -
+		m[9]*m[6]*m[15] +
+		m[9]*m[7]*m[14] +
+		m[13]*m[6]*m[11] -
+		m[13]*m[7]*m[10]
+
+	inv[4] = -m[4]*m[10]*m[15] +
+		m[4]*m[11]*m[14] +
+		m[8]*m[6]*m[15] -
+		m[8]*m[7]*m[14] -
+		m[12]*m[6]*m[11] +
+		m[12]*m[7]*m[10]
+
+	inv[8] = m[4]*m[9]*m[15] -
+		m[4]*m[11]*m[13] -
+		m[8]*m[5]*m[15] +
+		m[8]*m[7]*m[13] +
+		m[12]*m[5]*m[11] -
+		m[12]*m[7]*m[9]
+
+	inv[12] = -m[4]*m[9]*m[14] +
+		m[4]*m[10]*m[13] +
+		m[8]*m[5]*m[14] -
+		m[8]*m[6]*m[13] -
+		m[12]*m[5]*m[10] +
+		m[12]*m[6]*m[9]
+
+	inv[1] = -m[1]*m[10]*m[15] +
+		m[1]*m[11]*m[14] +
+		m[9]*m[2]*m[15] -
+		m[9]*m[3]*m[14] -
+		m[13]*m[2]*m[11] +
+		m[13]*m[3]*m[10]
+
+	inv[5] = m[0]*m[10]*m[15] -
+		m[0]*m[11]*m[14] -
+		m[8]*m[2]*m[15] +
+		m[8]*m[3]*m[14] +
+		m[12]*m[2]*m[11] -
+		m[12]*m[3]*m[10]
+
+	inv[9] = -m[0]*m[9]*m[15] +
+		m[0]*m[11]*m[13] +
+		m[8]*m[1]*m[15] -
+		m[8]*m[3]*m[13] -
+		m[12]*m[1]*m[11] +
+		m[12]*m[3]*m[9]
+
+	inv[13] = m[0]*m[9]*m[14] -
+		m[0]*m[10]*m[13] -
+		m[8]*m[1]*m[14] +
+		m[8]*m[2]*m[13] +
+		m[12]*m[1]*m[10] -
+		m[12]*m[2]*m[9]
+
+	inv[2] = m[1]*m[6]*m[15] -
+		m[1]*m[7]*m[14] -
+		m[5]*m[2]*m[15] +
+		m[5]*m[3]*m[14] +
+		m[13]*m[2]*m[7] -
+		m[13]*m[3]*m[6]
+
+	inv[6] = -m[0]*m[6]*m[15] +
+		m[0]*m[7]*m[14] +
+		m[4]*m[2]*m[15] -
+		m[4]*m[3]*m[14] -
+		m[12]*m[2]*m[7] +
+		m[12]*m[3]*m[6]
+
+	inv[10] = m[0]*m[5]*m[15] -
+		m[0]*m[7]*m[13] -
+		m[4]*m[1]*m[15] +
+		m[4]*m[3]*m[13] +
+		m[12]*m[1]*m[7] -
+		m[12]*m[3]*m[5]
+
+	inv[14] = -m[0]*m[5]*m[14] +
+		m[0]*m[6]*m[13] +
+		m[4]*m[1]*m[14] -
+		m[4]*m[2]*m[13] -
+		m[12]*m[1]*m[6] +
+		m[12]*m[2]*m[5]
+
+	inv[3] = -m[1]*m[6]*m[11] +
+		m[1]*m[7]*m[10] +
+		m[5]*m[2]*m[11] -
+		m[5]*m[3]*m[10] -
+		m[9]*m[2]*m[7] +
+		m[9]*m[3]*m[6]
+
+	inv[7] = m[0]*m[6]*m[11] -
+		m[0]*m[7]*m[10] -
+		m[4]*m[2]*m[11] +
+		m[4]*m[3]*m[10] +
+		m[8]*m[2]*m[7] -
+		m[8]*m[3]*m[6]
+
+	inv[11] = -m[0]*m[5]*m[11] +
+		m[0]*m[7]*m[9] +
+		m[4]*m[1]*m[11] -
+		m[4]*m[3]*m[9] -
+		m[8]*m[1]*m[7] +
+		m[8]*m[3]*m[5]
+
+	inv[15] = m[0]*m[5]*m[10] -
+		m[0]*m[6]*m[9] -
+		m[4]*m[1]*m[10] +
+		m[4]*m[2]*m[9] +
+		m[8]*m[1]*m[6] -
+		m[8]*m[2]*m[5]
+
+	det := m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12]
+
+	if det == 0 {
+		panic("Error finding inverse")
+	}
+
+	det = 1.0 / det
+	return Matrix4{
+		values: [4][4]float64{
+			{inv[0] * det, inv[1] * det, inv[2] * det, inv[3] * det},
+			{inv[4] * det, inv[5] * det, inv[6] * det, inv[7] * det},
+			{inv[8] * det, inv[9] * det, inv[10] * det, inv[11] * det},
+			{inv[12] * det, inv[13] * det, inv[14] * det, inv[15] * det},
+		},
+	}
+}
+
+func (m Matrix4) Transpose() Matrix4 {
+	return Matrix4{
+		[4][4]float64{
+			{m.values[0][0], m.values[1][0], m.values[2][0], m.values[3][0]},
+			{m.values[0][1], m.values[1][1], m.values[2][1], m.values[3][1]},
+			{m.values[0][2], m.values[1][2], m.values[2][2], m.values[3][2]},
+			{m.values[0][3], m.values[1][3], m.values[2][3], m.values[3][3]},
+		},
+	}
 }
 
 func (m1 Matrix4) MultiplyMatrix(m2 Matrix4) Matrix4 {

@@ -11,17 +11,17 @@ type testPrimitive struct {
 	size   float64
 }
 
-func (*testPrimitive) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
+func (testPrimitive) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	return false
 }
 
-func (p *testPrimitive) bounding() aabb {
+func (p testPrimitive) bounding() aabb {
 	min := p.center.Sub(NewVector3(p.size/2.0, p.size/2.0, p.size/2.0))
 	max := p.center.Add(NewVector3(p.size/2.0, p.size/2.0, p.size/2.0))
 	return newAABB(min, max)
 }
 
-func (p *testPrimitive) transformed(t Matrix4) Primitive {
+func (p testPrimitive) transformed(t Matrix4) primitive {
 	return p
 }
 
@@ -50,6 +50,6 @@ func TestAssignMortonCodes(t *testing.T) {
 			mortonCode: 7,
 		},
 	}
-	pairs := assignMortonCodes([]Primitive{&prim1, &prim2, &prim3}, enclosing, 4, 4)
+	pairs := assignMortonCodes([]tracable{{prim: prim1}, {prim: prim2}, {prim: prim3}}, enclosing, 4, 4)
 	assert.Equal(t, expected, pairs)
 }

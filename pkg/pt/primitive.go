@@ -12,34 +12,32 @@ type hit struct {
 	material  Material // Material at intersection point
 }
 
-type Intersectable interface {
+type intersectable interface {
 	intersected(ray ray, tMin, tMax float64, hitOut *hit) bool
 	bounding() aabb
 }
 
-type Primitive interface {
-	Intersectable
-	transformed(t Matrix4) Primitive
+type primitive interface {
+	intersectable
+	transformed(Matrix4) primitive
 }
 
 // TODO: Is there a better way, than to add mat to primitives?
 type sphere struct {
 	center Vector3
 	radius float64
-	mat    Material
 }
 
-func newSphere(center Vector3, radius float64, material Material) *sphere {
+func newSphere(center Vector3, radius float64) *sphere {
 	return &sphere{
 		center: center,
 		radius: radius,
-		mat:    material,
 	}
 }
 
-func (s *sphere) transformed(t Matrix4) Primitive {
-	// TODO: Scale sphere?
-	return newSphere(s.center.ToPoint().Transformed(t).ToV3(), s.radius, s.mat)
+func (s *sphere) transformed(t Matrix4) primitive {
+	// TODO: Transform point on Sphere and calc new Radius
+	return newSphere(s.center.ToPoint().Transformed(t).ToV3(), s.radius)
 }
 
 func (s *sphere) bounding() aabb {
@@ -79,7 +77,6 @@ func (s *sphere) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 		hitOut.normal = hitOut.normal.Mul(-1)
 	}
 	hitOut.t = t
-	hitOut.material = s.mat
 	return true
 }
 
@@ -90,23 +87,23 @@ type vertex struct {
 
 type triangle struct {
 	vertecies [3]vertex
-	mat       Material
+	//mat       Material
 
 	// Precalculate v0v1 and v0v2 as it's used
 	v0v1 Vector3
 	v0v2 Vector3
 }
 
-func newTriangle(vertecies [3]vertex, material Material) *triangle {
+func newTriangle(vertecies [3]vertex) *triangle {
 	return &triangle{
 		vertecies: vertecies,
-		mat:       material,
-		v0v1:      vertecies[1].position.Sub(vertecies[0].position),
-		v0v2:      vertecies[2].position.Sub(vertecies[0].position),
+		//mat:       material,
+		v0v1: vertecies[1].position.Sub(vertecies[0].position),
+		v0v2: vertecies[2].position.Sub(vertecies[0].position),
 	}
 }
 
-func newTriangleWithoutNormals(v0 Vector3, v1 Vector3, v2 Vector3, material Material) *triangle {
+func newTriangleWithoutNormals(v0 Vector3, v1 Vector3, v2 Vector3) *triangle {
 	vertecies := [3]vertex{
 		{
 			position: v0,
@@ -121,7 +118,7 @@ func newTriangleWithoutNormals(v0 Vector3, v1 Vector3, v2 Vector3, material Mate
 			normal:   calcNormal(v2, v0, v1),
 		},
 	}
-	return newTriangle(vertecies, material)
+	return newTriangle(vertecies)
 }
 
 func calcNormal(point Vector3, right Vector3, left Vector3) Vector3 {
@@ -148,22 +145,24 @@ func (tri *triangle) normal(u, v float64) Vector3 {
 	return normalU.Add(normalV).Add(normalW)
 }
 
-func (tri *triangle) transformed(t Matrix4) Primitive {
+func (tri *triangle) transformed(t Matrix4) primitive {
+	// TODO: Cache or precompute?
+	tinv := t.Transpose().Inverse()
+
 	var vertecies [3]vertex
 	vertecies[0] = vertex{
 		position: tri.vertecies[0].position.ToPoint().Transformed(t).ToV3(),
-		normal:   tri.vertecies[0].normal,
+		normal:   tri.vertecies[0].normal.ToPoint().Transformed(tinv).ToV3(),
 	}
 	vertecies[1] = vertex{
 		position: tri.vertecies[1].position.ToPoint().Transformed(t).ToV3(),
-		normal:   tri.vertecies[1].normal,
+		normal:   tri.vertecies[1].normal.ToPoint().Transformed(tinv).ToV3(),
 	}
 	vertecies[2] = vertex{
 		position: tri.vertecies[2].position.ToPoint().Transformed(t).ToV3(),
-		normal:   tri.vertecies[2].normal,
+		normal:   tri.vertecies[2].normal.ToPoint().Transformed(tinv).ToV3(),
 	}
-	// TODO: Rotate Normals!
-	return newTriangle(vertecies, tri.mat)
+	return newTriangle(vertecies)
 }
 
 func (tri *triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
@@ -201,6 +200,23 @@ func (tri *triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool 
 		hitOut.normal = hitOut.normal.Mul(-1)
 	}
 	hitOut.t = t
-	hitOut.material = tri.mat
 	return true
+}
+
+// Wrapper for pimitive including a material
+type tracable struct {
+	prim primitive
+	mat  Material
+}
+
+func (p tracable) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
+	if p.prim.intersected(ray, tMin, tMax, hitOut) {
+		hitOut.material = p.mat
+		return true
+	}
+	return false
+}
+
+func (p tracable) bounding() aabb {
+	return p.prim.bounding()
 }

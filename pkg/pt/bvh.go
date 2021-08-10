@@ -7,23 +7,10 @@ import (
 
 type BVH struct {
 	root  *bvhNode
-	prims []Primitive
+	prims []tracable
 }
 
-func NewBVH(prims []Primitive) BVH {
-	/*
-		indeces := make([]int, len(prims))
-		for i := 0; i < len(prims); i++ {
-			indeces[i] = i
-		}
-		return BVH{
-			root: &bvhNode{
-				prims:    indeces,
-				bounding: enclosing(prims),
-			},
-			prims: prims,
-		}
-	*/
+func NewBVH(prims []tracable) BVH {
 	return buildLBVH(prims, enclosing(prims), runtime.GOMAXPROCS(0))
 }
 
@@ -60,7 +47,7 @@ func (bvh *BVH) updateBounding(threads int) {
 	wg.Add(threads)
 	jobs := make(chan *bvhNode)
 	for i := 0; i < threads; i++ {
-		go func(pipeline chan *bvhNode, prims []Primitive) {
+		go func(pipeline chan *bvhNode, prims []tracable) {
 			defer wg.Done()
 			for leaf := range pipeline {
 				leaf.updateAABB(prims)
@@ -124,7 +111,7 @@ func (node *bvhNode) collectLeaves(acc *[]*bvhNode) {
 }
 
 // TODO: rethink function, maybe using a channel and pushing all ready nodes makes more sense
-func (node *bvhNode) updateAABB(primitives []Primitive) {
+func (node *bvhNode) updateAABB(primitives []tracable) {
 	if node.isLeaf {
 		node.bounding = enclosingSlice(node.prims, primitives)
 		// TODO: use atomic.CompareAndSwapUint32

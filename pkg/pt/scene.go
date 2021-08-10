@@ -15,7 +15,7 @@ func (s *Scene) Add(node *SceneNode) {
 }
 
 func (s *Scene) Compile() BVH {
-	prims := s.root.collectPrimitives(IdentityMatrix())
+	prims := s.root.collectTracables(IdentityMatrix())
 	return NewBVH(prims)
 }
 
@@ -62,52 +62,53 @@ func (n *SceneNode) transform(t Matrix4) {
 
 // TODO: Make Multi Thread
 // TODO: Check if zero alloc with accumulator is more efficient
-func (n *SceneNode) collectPrimitives(t Matrix4) []Primitive {
+func (n *SceneNode) collectTracables(t Matrix4) []tracable {
 	t = n.transformation.MultiplyMatrix(t)
-	out := make([]Primitive, 0)
+	out := make([]tracable, 0)
 	if n.mesh != nil {
 		out = append(out, n.mesh.transformed(t)...)
 	}
 	for _, child := range n.children {
-		out = append(out, child.collectPrimitives(t)...)
+		out = append(out, child.collectTracables(t)...)
 	}
 	return out
 }
+
+type geometry []primitive
 
 // TODO: Does it make sense to have seperate transformation for mesh?
 type Mesh struct {
 	transformation Matrix4
 	geometry       geometry
-	//material       Material
+	material       Material
 }
 
 func NewSphereMesh(center Vector3, radius float64, material Material) *Mesh {
-	geo := geometry{newSphere(center, radius, material)}
-	return newMesh(geo)
+	geo := geometry{newSphere(center, radius)}
+	return NewMesh(geo, material)
 }
 
 func NewTriangleMesh(v0 Vector3, v1 Vector3, v2 Vector3, material Material) *Mesh {
-	geo := geometry{newTriangleWithoutNormals(v0, v1, v2, material)}
-	return newMesh(geo)
+	geo := geometry{newTriangleWithoutNormals(v0, v1, v2)}
+	return NewMesh(geo, material)
 }
 
-func newMesh(geometry geometry) *Mesh {
+func NewMesh(geometry geometry, mat Material) *Mesh {
 	return &Mesh{
 		transformation: IdentityMatrix(),
 		geometry:       geometry,
+		material:       mat,
 	}
 }
 
-func (m Mesh) transformed(t Matrix4) []Primitive {
-	return m.geometry.transformed(m.transformation.MultiplyMatrix(t))
-}
-
-type geometry []Primitive
-
-func (g geometry) transformed(t Matrix4) []Primitive {
-	prims := make([]Primitive, len(g))
-	for i, prim := range g {
-		prims[i] = prim.transformed(t)
+func (m Mesh) transformed(t Matrix4) []tracable {
+	tracables := make([]tracable, len(m.geometry))
+	t = m.transformation.MultiplyMatrix(t)
+	for i, prim := range m.geometry {
+		tracables[i] = tracable{
+			prim: prim.transformed(t),
+			mat:  m.material,
+		}
 	}
-	return prims
+	return tracables
 }

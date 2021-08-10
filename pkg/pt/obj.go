@@ -7,23 +7,22 @@ import (
 	"strings"
 )
 
-//TODO: Move material somewhere else, or parse .mat file
-func ParseFromPath(path string, material Material) *Mesh {
+//TODO: Parse .mat file
+func ParseFromPath(path string) geometry {
 	objFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
 	}
 	defer objFile.Close()
-	faces := parseOBJ(objFile, material)
-	return newMesh(faces)
+	return parseOBJ(objFile)
 }
 
-func parseOBJ(objFile *os.File, material Material) []Primitive {
+func parseOBJ(objFile *os.File) []primitive {
 	scanner := bufio.NewScanner(objFile)
 
 	vertecies := make([]Vector3, 1, 1024)
 	normals := make([]Vector3, 1, 1024)
-	triangles := make([]Primitive, 0, 1024)
+	triangles := make([]primitive, 0, 1024)
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -50,7 +49,7 @@ func parseOBJ(objFile *os.File, material Material) []Primitive {
 				normals = append(normals, NewVector3(numbers[0], numbers[1], numbers[2]))
 			}
 		case "f":
-			if face, err := parseFace(values, vertecies, normals, material); err != nil {
+			if face, err := parseFace(values, vertecies, normals); err != nil {
 				panic(err)
 			} else {
 				triangles = append(triangles, face...)
@@ -67,7 +66,7 @@ func parseOBJ(objFile *os.File, material Material) []Primitive {
 	return triangles
 }
 
-func parseFace(args []string, vertecies []Vector3, normals []Vector3, material Material) ([]Primitive, error) {
+func parseFace(args []string, vertecies []Vector3, normals []Vector3) ([]primitive, error) {
 	vIndeces := make([]int, 0, 4)
 	nIndeces := make([]int, 0, 4)
 	for _, arg := range args {
@@ -94,39 +93,40 @@ func parseFace(args []string, vertecies []Vector3, normals []Vector3, material M
 	}
 
 	if len(nIndeces) == len(args) {
-		triangles := make([]Primitive, 0)
+		triangles := make([]primitive, 0)
 		for i := 1; i+2 <= len(vIndeces); i++ {
-			triangles = append(triangles, triangleForIndeces(append(vIndeces[0:1], vIndeces[i:i+2]...), append(nIndeces[0:1], nIndeces[i:i+2]...), vertecies, normals, material))
+			triangles = append(triangles, triangleForIndeces(append(vIndeces[0:1], vIndeces[i:i+2]...), append(nIndeces[0:1], nIndeces[i:i+2]...), vertecies, normals))
 		}
 		return triangles, nil
 	} else {
-		triangles := make([]Primitive, 0)
+		triangles := make([]primitive, 0)
 		for i := 1; i+2 <= len(vIndeces); i++ {
-			triangles = append(triangles, triangleWithoutNormals(append(vIndeces[0:1], vIndeces[i:i+2]...), vertecies, material))
+			triangles = append(triangles, triangleWithoutNormals(append(vIndeces[0:1], vIndeces[i:i+2]...), vertecies))
 		}
 		return triangles, nil
 	}
 }
 
-func triangleWithoutNormals(vIndeces []int, vertecies []Vector3, material Material) *triangle {
-	return newTriangleWithoutNormals(vertecies[vIndeces[0]], vertecies[vIndeces[1]], vertecies[vIndeces[2]], material)
+func triangleWithoutNormals(vIndeces []int, vertecies []Vector3) *triangle {
+	return newTriangleWithoutNormals(vertecies[vIndeces[0]], vertecies[vIndeces[1]], vertecies[vIndeces[2]])
 }
 
-func triangleForIndeces(vIndeces []int, nIndeces []int, vertecies []Vector3, normals []Vector3, material Material) *triangle {
+func triangleForIndeces(vIndeces []int, nIndeces []int, vertecies []Vector3, normals []Vector3) *triangle {
+	//return newTriangleWithoutNormals(vertecies[vIndeces[0]], vertecies[vIndeces[1]], vertecies[vIndeces[2]])
 	var v [3]vertex
 	v[0] = vertex{
 		position: vertecies[vIndeces[0]],
-		normal:   normals[0],
+		normal:   normals[nIndeces[0]],
 	}
 	v[1] = vertex{
 		position: vertecies[vIndeces[1]],
-		normal:   normals[1],
+		normal:   normals[nIndeces[1]],
 	}
 	v[2] = vertex{
 		position: vertecies[vIndeces[2]],
-		normal:   normals[2],
+		normal:   normals[nIndeces[2]],
 	}
-	return newTriangle(v, material)
+	return newTriangle(v)
 }
 
 func parseFloat(args []string) ([]float64, error) {

@@ -10,8 +10,9 @@ func main() {
 	ar := 16.0 / 9
 	fov := 70.0
 	camera := NewCamera(ar, fov, CameraTransformation{
-		LookFrom: NewVector3(6, 6, 10),
-		LookAt:   NewVector3(0, 6, 0),
+		//LookFrom: NewVector3(7, 6, 10),
+		LookFrom: NewVector3(20, 20, 20),
+		LookAt:   NewVector3(0, 10, 0),
 		Up:       NewVector3(0, 1, 0),
 	})
 	scene := NewScene()
@@ -26,16 +27,23 @@ func main() {
 			Diffusion: 0,
 		})))
 	*/
+	deerGeometry := ParseFromPath("../../assets/tree.obj")
 
-	cube := NewSceneNode(ParseFromPath("../../assets/deer.obj", &Diffuse{
-		Albedo: NewColor(.5, .5, .5),
-	}))
-	cube.ScaleUniform(0.05)
-	scene.Add(cube)
+	diffuseDeer := NewSceneNode(NewMesh(deerGeometry, &Diffuse{Albedo: NewColor(1, .5, .5)}))
+	diffuseDeer.ScaleUniform(0.05)
+	diffuseDeer.Translate(50, 0, 0)
+	//scene.Add(diffuseDeer)
+
+	reflectiveDeer := NewSceneNode(NewMesh(deerGeometry, &Reflective{Albedo: NewColor(.2, .2, .2), Diffusion: 0}))
+	//reflectiveDeer := NewSceneNode(NewMesh(deerGeometry, &Diffuse{Albedo: NewColor(.2, .2, .2)}))
+	//reflectiveDeer.ScaleUniform(0.045)
+	//reflectiveDeer.Rotate(NewVector3(0, 1, 0), 45)
+	//reflectiveDeer.Translate(-100, 0, -50)
+	scene.Add(reflectiveDeer)
 
 	bvh := scene.Compile()
 	renderer := NewDefaultRenderer(bvh, camera)
-	buff := NewBufferAspect(200, ar)
+	buff := NewBufferAspect(720, ar)
 	renderer.RenderToBuffer(buff)
 	img := buff.ToImage()
 	f, err := os.Create("test.png")

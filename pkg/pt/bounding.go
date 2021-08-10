@@ -17,7 +17,7 @@ func newAABB(min, max Vector3) aabb {
 	return bouding
 }
 
-func enclosing(primitives []Primitive) aabb {
+func enclosing(primitives []tracable) aabb {
 	enclosing := primitives[0].bounding()
 	for i := 1; i < len(primitives); i++ {
 		enclosing = enclosing.add(primitives[i].bounding())
@@ -26,7 +26,7 @@ func enclosing(primitives []Primitive) aabb {
 	return enclosing
 }
 
-func enclosingSlice(indeces []int, primitives []Primitive) aabb {
+func enclosingSlice(indeces []int, primitives []tracable) aabb {
 	enclosing := primitives[indeces[0]].bounding()
 	for i := 1; i < len(indeces); i++ {
 		prim := primitives[indeces[i]]

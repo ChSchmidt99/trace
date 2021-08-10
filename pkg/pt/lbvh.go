@@ -8,7 +8,7 @@ import (
 
 var MORTON_SIZE = uint32(math.Pow(2, 12))
 
-func buildLBVH(prims []Primitive, enclosing aabb, threads int) BVH {
+func buildLBVH(prims []tracable, enclosing aabb, threads int) BVH {
 	paris := assignMortonCodes(prims, enclosing, MORTON_SIZE, threads)
 	sortPairs(paris, threads)
 	bvh := constructLBVH(paris, MORTON_SIZE, threads)
@@ -23,7 +23,7 @@ type mortonPair struct {
 	mortonCode uint64
 }
 
-func assignMortonCodes(prims []Primitive, enclosing aabb, mortonSize uint32, threads int) []mortonPair {
+func assignMortonCodes(prims []tracable, enclosing aabb, mortonSize uint32, threads int) []mortonPair {
 	pairs := make([]mortonPair, len(prims))
 	batchSize := int(math.Ceil(float64(len(prims)) / float64(threads)))
 	wg := sync.WaitGroup{}
@@ -54,7 +54,7 @@ func assignMortonCodes(prims []Primitive, enclosing aabb, mortonSize uint32, thr
 	return pairs
 }
 
-func computeMorton(prim Primitive, morton *Morton, enclosing aabb, mortonSize uint32) uint64 {
+func computeMorton(prim tracable, morton *Morton, enclosing aabb, mortonSize uint32) uint64 {
 	center := prim.bounding().barycenter
 	deltaX := math.Abs(enclosing.bounds[0].X - center.X)
 	deltaY := math.Abs(enclosing.bounds[0].Y - center.Y)
