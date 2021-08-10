@@ -36,6 +36,30 @@ func (n *SceneNode) Add(node *SceneNode) {
 	n.children = append(n.children, node)
 }
 
+func (n *SceneNode) ScaleUniform(factor float64) {
+	n.transform(scaleUniform(factor))
+}
+
+func (n *SceneNode) Scale(x, y, z float64) {
+	n.transform(scale(x, y, z))
+}
+
+func (n *SceneNode) Translate(x, y, z float64) {
+	n.transform(translate(x, y, z))
+}
+
+func (n *SceneNode) Rotate(dir Vector3, angle float64) {
+	n.transform(rotate(dir, angle))
+}
+
+func (n *SceneNode) ResetTransformation(dir Vector3, angle float64) {
+	n.transformation = IdentityMatrix()
+}
+
+func (n *SceneNode) transform(t Matrix4) {
+	n.transformation = n.transformation.MultiplyMatrix(t)
+}
+
 // TODO: Make Multi Thread
 // TODO: Check if zero alloc with accumulator is more efficient
 func (n *SceneNode) collectPrimitives(t Matrix4) []Primitive {
@@ -50,6 +74,7 @@ func (n *SceneNode) collectPrimitives(t Matrix4) []Primitive {
 	return out
 }
 
+// TODO: Does it make sense to have seperate transformation for mesh?
 type Mesh struct {
 	transformation Matrix4
 	geometry       geometry
@@ -58,19 +83,18 @@ type Mesh struct {
 
 func NewSphereMesh(center Vector3, radius float64, material Material) *Mesh {
 	geo := geometry{newSphere(center, radius, material)}
-	return newMesh(geo, nil)
+	return newMesh(geo)
 }
 
 func NewTriangleMesh(v0 Vector3, v1 Vector3, v2 Vector3, material Material) *Mesh {
 	geo := geometry{newTriangleWithoutNormals(v0, v1, v2, material)}
-	return newMesh(geo, nil)
+	return newMesh(geo)
 }
 
-func newMesh(geometry geometry, material Material) *Mesh {
+func newMesh(geometry geometry) *Mesh {
 	return &Mesh{
 		transformation: IdentityMatrix(),
 		geometry:       geometry,
-		//material:       material,
 	}
 }
 

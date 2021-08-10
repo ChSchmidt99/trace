@@ -5,8 +5,6 @@ import (
 	"sync"
 )
 
-// Temporary BVH placeholder for testing
-
 type BVH struct {
 	root  *bvhNode
 	prims []Primitive

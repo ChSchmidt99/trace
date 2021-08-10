@@ -38,8 +38,8 @@ func newSphere(center Vector3, radius float64, material Material) *sphere {
 }
 
 func (s *sphere) transformed(t Matrix4) Primitive {
-	// TODO: Implement Me!
-	return s
+	// TODO: Scale sphere?
+	return newSphere(s.center.ToPoint().Transformed(t).ToV3(), s.radius, s.mat)
 }
 
 func (s *sphere) bounding() aabb {
@@ -149,8 +149,21 @@ func (tri *triangle) normal(u, v float64) Vector3 {
 }
 
 func (tri *triangle) transformed(t Matrix4) Primitive {
-	// TODO: Implement Me!
-	return tri
+	var vertecies [3]vertex
+	vertecies[0] = vertex{
+		position: tri.vertecies[0].position.ToPoint().Transformed(t).ToV3(),
+		normal:   tri.vertecies[0].normal,
+	}
+	vertecies[1] = vertex{
+		position: tri.vertecies[1].position.ToPoint().Transformed(t).ToV3(),
+		normal:   tri.vertecies[1].normal,
+	}
+	vertecies[2] = vertex{
+		position: tri.vertecies[2].position.ToPoint().Transformed(t).ToV3(),
+		normal:   tri.vertecies[2].normal,
+	}
+	// TODO: Rotate Normals!
+	return newTriangle(vertecies, tri.mat)
 }
 
 func (tri *triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {

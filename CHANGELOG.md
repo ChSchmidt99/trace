@@ -8,7 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - added axis-aligned bounding box
 - added bounding volume hierarchy traversal
 - added morton code computation 
-- added very basic LBVH construction 
+- added basic LBVH construction 
+- scene node transformation 
+- .obj file parser
 
 ## [0.0.2] - 2021-07-15
 ### Changed
