@@ -14,6 +14,35 @@ func NewBVH(prims []tracable) BVH {
 	return buildLBVH(prims, enclosing(prims), runtime.GOMAXPROCS(0))
 }
 
+// Number of intersection tests executed for given ray, including node bounding boxes and leaf primitives
+func (bvh *BVH) intersectionTests(ray ray, tMin, tMax float64) int {
+	stack := bvhStack{}
+	stack.push(bvh.root)
+	count := 0
+	closest := tMax
+	hitOut := hit{}
+	for {
+		node := stack.pop()
+		if node == nil {
+			return count
+		}
+		count++
+		if node.bounding.intersected(ray, tMin, closest) {
+			if node.isLeaf {
+				count += len(node.prims)
+				for i := 0; i < len(node.prims); i++ {
+					prim := bvh.prims[node.prims[i]]
+					if prim.intersected(ray, tMin, closest, &hitOut) {
+						closest = hitOut.t
+					}
+				}
+			} else {
+				stack.push(node.children...)
+			}
+		}
+	}
+}
+
 func (bvh *BVH) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	stack := bvhStack{}
 	stack.push(bvh.root)
@@ -30,6 +59,7 @@ func (bvh *BVH) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 					prim := bvh.prims[node.prims[i]]
 					if prim.intersected(ray, tMin, closest, hitOut) {
 						didHit = true
+						// TODO: Can setting closest be avoided by using hitOut.t?
 						closest = hitOut.t
 					}
 				}

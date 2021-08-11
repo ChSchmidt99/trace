@@ -51,7 +51,8 @@ func main() {
 	bvh := scene.Compile()
 	renderer := NewDefaultRenderer(bvh, camera)
 	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)
-	renderer.RenderToBuffer(buff)
+	//renderer.RenderToBuffer(buff)
+	renderer.IntersectionHeatMapToBuffer(buff)
 	img := buff.ToImage()
 	f, err := os.Create("test.png")
 	if err != nil {
