@@ -23,24 +23,24 @@ type primitive interface {
 }
 
 // TODO: Is there a better way, than to add mat to primitives?
-type sphere struct {
+type Sphere struct {
 	center Vector3
 	radius float64
 }
 
-func newSphere(center Vector3, radius float64) *sphere {
-	return &sphere{
+func NewSphere(center Vector3, radius float64) *Sphere {
+	return &Sphere{
 		center: center,
 		radius: radius,
 	}
 }
 
-func (s *sphere) transformed(t Matrix4) primitive {
+func (s *Sphere) transformed(t Matrix4) primitive {
 	// TODO: Transform point on Sphere and calc new Radius
-	return newSphere(s.center.ToPoint().Transformed(t).ToV3(), s.radius)
+	return NewSphere(s.center.ToPoint().Transformed(t).ToV3(), s.radius)
 }
 
-func (s *sphere) bounding() aabb {
+func (s *Sphere) bounding() aabb {
 	// TODO: Cache!
 	radVec := NewVector3(s.radius, s.radius, s.radius)
 	min := s.center.Sub(radVec)
@@ -48,7 +48,7 @@ func (s *sphere) bounding() aabb {
 	return newAABB(min, max)
 }
 
-func (s *sphere) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
+func (s *Sphere) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	oc := ray.origin.Sub(s.center)
 	dirNorm := ray.direction.Length()
 	a := dirNorm * dirNorm
@@ -85,25 +85,23 @@ type vertex struct {
 	normal   Vector3
 }
 
-type triangle struct {
+type Triangle struct {
 	vertecies [3]vertex
-	//mat       Material
 
 	// Precalculate v0v1 and v0v2 as it's used
 	v0v1 Vector3
 	v0v2 Vector3
 }
 
-func newTriangle(vertecies [3]vertex) *triangle {
-	return &triangle{
+func NewTriangle(vertecies [3]vertex) *Triangle {
+	return &Triangle{
 		vertecies: vertecies,
-		//mat:       material,
-		v0v1: vertecies[1].position.Sub(vertecies[0].position),
-		v0v2: vertecies[2].position.Sub(vertecies[0].position),
+		v0v1:      vertecies[1].position.Sub(vertecies[0].position),
+		v0v2:      vertecies[2].position.Sub(vertecies[0].position),
 	}
 }
 
-func newTriangleWithoutNormals(v0 Vector3, v1 Vector3, v2 Vector3) *triangle {
+func NewTriangleWithoutNormals(v0 Vector3, v1 Vector3, v2 Vector3) *Triangle {
 	vertecies := [3]vertex{
 		{
 			position: v0,
@@ -118,7 +116,7 @@ func newTriangleWithoutNormals(v0 Vector3, v1 Vector3, v2 Vector3) *triangle {
 			normal:   calcNormal(v2, v0, v1),
 		},
 	}
-	return newTriangle(vertecies)
+	return NewTriangle(vertecies)
 }
 
 func calcNormal(point Vector3, right Vector3, left Vector3) Vector3 {
@@ -127,7 +125,7 @@ func calcNormal(point Vector3, right Vector3, left Vector3) Vector3 {
 	return pb.Cross(pa).Unit()
 }
 
-func (t *triangle) bounding() aabb {
+func (t *Triangle) bounding() aabb {
 	// TODO: Cache!
 	x := [3]float64{t.vertecies[0].position.X, t.vertecies[1].position.X, t.vertecies[2].position.X}
 	y := [3]float64{t.vertecies[0].position.Y, t.vertecies[1].position.Y, t.vertecies[2].position.Y}
@@ -138,14 +136,14 @@ func (t *triangle) bounding() aabb {
 }
 
 // Takes u and v barycentric coordinates and returns the normal at point p
-func (tri *triangle) normal(u, v float64) Vector3 {
+func (tri *Triangle) normal(u, v float64) Vector3 {
 	normalW := tri.vertecies[0].normal.Mul(1 - u - v)
 	normalU := tri.vertecies[1].normal.Mul(u)
 	normalV := tri.vertecies[2].normal.Mul(v)
 	return normalU.Add(normalV).Add(normalW)
 }
 
-func (tri *triangle) transformed(t Matrix4) primitive {
+func (tri *Triangle) transformed(t Matrix4) primitive {
 	// TODO: Cache or precompute?
 	tinv := t.Transpose().Inverse()
 
@@ -162,10 +160,10 @@ func (tri *triangle) transformed(t Matrix4) primitive {
 		position: tri.vertecies[2].position.ToPoint().Transformed(t).ToV3(),
 		normal:   tri.vertecies[2].normal.ToPoint().Transformed(tinv).ToV3(),
 	}
-	return newTriangle(vertecies)
+	return NewTriangle(vertecies)
 }
 
-func (tri *triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
+func (tri *Triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	// Implementation of the Möller-Trumbore algorithm
 	pvec := ray.direction.Cross(tri.v0v2)
 	det := tri.v0v1.Dot(pvec)

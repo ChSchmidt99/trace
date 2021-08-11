@@ -74,26 +74,16 @@ func (n *SceneNode) collectTracables(t Matrix4) []tracable {
 	return out
 }
 
-type geometry []primitive
+type Geometry []primitive
 
 // TODO: Does it make sense to have seperate transformation for mesh?
 type Mesh struct {
 	transformation Matrix4
-	geometry       geometry
+	geometry       Geometry
 	material       Material
 }
 
-func NewSphereMesh(center Vector3, radius float64, material Material) *Mesh {
-	geo := geometry{newSphere(center, radius)}
-	return NewMesh(geo, material)
-}
-
-func NewTriangleMesh(v0 Vector3, v1 Vector3, v2 Vector3, material Material) *Mesh {
-	geo := geometry{newTriangleWithoutNormals(v0, v1, v2)}
-	return NewMesh(geo, material)
-}
-
-func NewMesh(geometry geometry, mat Material) *Mesh {
+func NewMesh(geometry Geometry, mat Material) *Mesh {
 	return &Mesh{
 		transformation: IdentityMatrix(),
 		geometry:       geometry,

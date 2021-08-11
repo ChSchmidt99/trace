@@ -8,7 +8,7 @@ import (
 )
 
 //TODO: Parse .mat file
-func ParseFromPath(path string) geometry {
+func ParseFromPath(path string) Geometry {
 	objFile, err := os.Open(path)
 	if err != nil {
 		panic(err)
@@ -107,11 +107,11 @@ func parseFace(args []string, vertecies []Vector3, normals []Vector3) ([]primiti
 	}
 }
 
-func triangleWithoutNormals(vIndeces []int, vertecies []Vector3) *triangle {
-	return newTriangleWithoutNormals(vertecies[vIndeces[0]], vertecies[vIndeces[1]], vertecies[vIndeces[2]])
+func triangleWithoutNormals(vIndeces []int, vertecies []Vector3) *Triangle {
+	return NewTriangleWithoutNormals(vertecies[vIndeces[0]], vertecies[vIndeces[1]], vertecies[vIndeces[2]])
 }
 
-func triangleForIndeces(vIndeces []int, nIndeces []int, vertecies []Vector3, normals []Vector3) *triangle {
+func triangleForIndeces(vIndeces []int, nIndeces []int, vertecies []Vector3, normals []Vector3) *Triangle {
 	//return newTriangleWithoutNormals(vertecies[vIndeces[0]], vertecies[vIndeces[1]], vertecies[vIndeces[2]])
 	var v [3]vertex
 	v[0] = vertex{
@@ -126,7 +126,7 @@ func triangleForIndeces(vIndeces []int, nIndeces []int, vertecies []Vector3, nor
 		position: vertecies[vIndeces[2]],
 		normal:   normals[nIndeces[2]],
 	}
-	return newTriangle(v)
+	return NewTriangle(v)
 }
 
 func parseFloat(args []string) ([]float64, error) {

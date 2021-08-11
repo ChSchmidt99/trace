@@ -11,6 +11,10 @@ func NewColor(r, g, b float64) Color {
 	return Color{r, g, b}
 }
 
+func NewColor255(r, g, b int) Color {
+	return Color{float64(r) / 255.0, float64(g) / 255.0, float64(b) / 255.0}
+}
+
 func (c1 Color) Blend(c2 Color) Color {
 	return Color{c1.X * c2.X, c1.Y * c2.Y, c1.Z * c2.Z}
 }

@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-var MORTON_SIZE = uint32(math.Pow(2, 12))
+var MORTON_SIZE = uint32(math.Pow(2, 20))
 
 func buildLBVH(prims []tracable, enclosing aabb, threads int) BVH {
 	paris := assignMortonCodes(prims, enclosing, MORTON_SIZE, threads)

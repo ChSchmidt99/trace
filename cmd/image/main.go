@@ -6,44 +6,51 @@ import (
 	"os"
 )
 
+const (
+	ASPECT_RATIO = 16.0 / 9
+	FOV          = 70.0
+	RESOLUTION   = 400
+)
+
 func main() {
-	ar := 16.0 / 9
-	fov := 70.0
-	camera := NewCamera(ar, fov, CameraTransformation{
+
+	camera := NewCamera(ASPECT_RATIO, FOV, CameraTransformation{
 		//LookFrom: NewVector3(7, 6, 10),
-		LookFrom: NewVector3(20, 20, 20),
-		LookAt:   NewVector3(0, 10, 0),
+		LookFrom: NewVector3(10, 5, 10),
+		LookAt:   NewVector3(0, 4, 0),
 		Up:       NewVector3(0, 1, 0),
 	})
 	scene := NewScene()
+	//cube := ParseFromPath("../../assets/cube.obj")
+	//sphere := Geometry{NewSphere(NewVector3(15, 25, -40), 25)}
 
-	/*
-		radius := .5
-		scene.Add(NewSceneNode(NewSphereMesh(NewVector3(2, 2, 1), radius, &Diffuse{
-			Albedo: NewColor(1, 0, 0),
-		})))
-		scene.Add(NewSceneNode(NewTriangleMesh(NewVector3(0, 0, 2), NewVector3(2, 0, 0), NewVector3(0, 2, 0), &Reflective{
-			Albedo:    NewColor(0, 0, 1),
-			Diffusion: 0,
-		})))
-	*/
-	deerGeometry := ParseFromPath("../../assets/tree.obj")
+	triangle := Geometry{NewTriangleWithoutNormals(NewVector3(-25, 0, 40), NewVector3(-25, 0, -40), NewVector3(-25, 40, 40)),
+		NewTriangleWithoutNormals(NewVector3(-25, 0, -40), NewVector3(-25, 40, -40), NewVector3(-25, 40, 40))}
 
-	diffuseDeer := NewSceneNode(NewMesh(deerGeometry, &Diffuse{Albedo: NewColor(1, .5, .5)}))
-	diffuseDeer.ScaleUniform(0.05)
-	diffuseDeer.Translate(50, 0, 0)
-	//scene.Add(diffuseDeer)
+	bunny := ParseFromPath("../../assets/local/bunny/bunny.obj")
+	//tree := ParseFromPath("../../assets/tree.obj")
 
-	reflectiveDeer := NewSceneNode(NewMesh(deerGeometry, &Reflective{Albedo: NewColor(.2, .2, .2), Diffusion: 0}))
-	//reflectiveDeer := NewSceneNode(NewMesh(deerGeometry, &Diffuse{Albedo: NewColor(.2, .2, .2)}))
-	//reflectiveDeer.ScaleUniform(0.045)
-	//reflectiveDeer.Rotate(NewVector3(0, 1, 0), 45)
-	//reflectiveDeer.Translate(-100, 0, -50)
-	scene.Add(reflectiveDeer)
+	mirrorMat := Reflective{Albedo: NewColor(.2, .2, .2), Diffusion: 0}
+	greenMat := Diffuse{Albedo: NewColor255(47, 243, 84)}
+	//glass := Refractive{Albedo: NewColor(.3, .3, .3), Ratio: 1.2}
+
+	//diffuseTree := NewSceneNode(NewMesh(tree, &glass))
+	//mirrorSphere := NewSceneNode(NewMesh(sphere, &mirrorMat))
+	mirrorTriangle := NewSceneNode(NewMesh(triangle, &mirrorMat))
+	bunnyNode := NewSceneNode(NewMesh(bunny, &greenMat))
+	bunnyNode.ScaleUniform(50)
+
+	//mirrorCube.ScaleUniform(50)
+	//mirrorCube.Translate(0, 0, -2)
+
+	scene.Add(bunnyNode)
+	//scene.Add(diffuseTree)
+	//scene.Add(mirrorSphere)
+	scene.Add(mirrorTriangle)
 
 	bvh := scene.Compile()
 	renderer := NewDefaultRenderer(bvh, camera)
-	buff := NewBufferAspect(720, ar)
+	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)
 	renderer.RenderToBuffer(buff)
 	img := buff.ToImage()
 	f, err := os.Create("test.png")

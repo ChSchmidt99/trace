@@ -17,7 +17,7 @@ func DefaultClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color
 	c.depth++
 	// If material scatters, compute intersections with scattered ray and then call itself recursively
 	if b, result := h.material.scatter(r, h, c.rand); b {
-		if renderer.bvh.intersected(result.scattered, 0.001, math.Inf(1), h) {
+		if renderer.bvh.intersected(result.scattered, 0.0001, math.Inf(1), h) {
 			return renderer.closest(renderer, c, result.scattered, h).Blend(result.attenuation)
 		} else {
 			return renderer.miss(renderer, c, result.scattered).Blend(result.attenuation)
@@ -46,7 +46,7 @@ type Renderer struct {
 func NewDefaultRenderer(bvh BVH, camera *Camera) *Renderer {
 	return &Renderer{
 		numCPU:   runtime.GOMAXPROCS(0),
-		maxDepth: 5,
+		maxDepth: 2,
 		bvh:      bvh,
 		spp:      100,
 		camera:   camera,
