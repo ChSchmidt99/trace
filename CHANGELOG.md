@@ -5,17 +5,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [0.0.3] - 2021-08-12
 ### Added
 - Axis-aligned bounding box
 - Bounding volume hierarchy traversal
 - Morton code computation 
 - Basic LBVH construction 
 - .obj file parser
+- light emitting materials 
 
 ### Changed
 - partially fixed scene node transformation
 - split up primitive and tracable
 - transforming normal using transposed inverse of transformation matrix
+- fixed ApproxZero bug
 
 ## [0.0.2] - 2021-07-15
 ### Changed

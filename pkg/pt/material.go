@@ -11,18 +11,34 @@ type scatterResult struct {
 }
 
 type Material interface {
+	// TODO: use ray pointer to reuse?
 	scatter(ray, *hit, *rand.Rand) (bool, scatterResult)
+	emittedLight() Color
+}
+
+type Light struct {
+	Color Color
+}
+
+func (Light) scatter(ray, *hit, *rand.Rand) (bool, scatterResult) {
+	return false, scatterResult{}
+}
+
+func (l Light) emittedLight() Color {
+	return l.Color
 }
 
 type Diffuse struct {
 	Albedo Color
 }
 
-func (d *Diffuse) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
+func (d Diffuse) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
 	scatterDirection := intersec.normal.Add(RandomUnitVector(r))
+
 	if scatterDirection.ApproxZero() {
 		scatterDirection = intersec.normal
 	}
+
 	ray.reuse(intersec.point, scatterDirection)
 	return true, scatterResult{
 		scattered:   ray,
@@ -30,12 +46,16 @@ func (d *Diffuse) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterRe
 	}
 }
 
+func (Diffuse) emittedLight() Color {
+	return NewColor(0, 0, 0)
+}
+
 type Reflective struct {
 	Albedo    Color
 	Diffusion float64 // diffusion in range [0,1]
 }
 
-func (d *Reflective) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
+func (d Reflective) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
 	reflected := reflect(ray.direction.Unit(), intersec.normal)
 	ray.reuse(intersec.point, reflected.Add(RandomUnitVector(r).Mul(d.Diffusion)))
 	return reflected.Dot(intersec.normal) > 0, scatterResult{
@@ -44,12 +64,16 @@ func (d *Reflective) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatte
 	}
 }
 
+func (Reflective) emittedLight() Color {
+	return NewColor(0, 0, 0)
+}
+
 type Refractive struct {
 	Albedo Color
 	Ratio  float64
 }
 
-func (d *Refractive) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
+func (d Refractive) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
 	defractionRatio := d.Ratio
 	if intersec.frontFace {
 		defractionRatio = 1 / d.Ratio
@@ -72,6 +96,10 @@ func (d *Refractive) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatte
 		scattered:   ray,
 		attenuation: d.Albedo,
 	}
+}
+
+func (Refractive) emittedLight() Color {
+	return NewColor(0, 0, 0)
 }
 
 func reflect(v Vector3, n Vector3) Vector3 {

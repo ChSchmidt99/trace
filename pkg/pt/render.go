@@ -12,25 +12,26 @@ type ClosestHitShader func(*Renderer, context, ray, *hit) Color
 
 func DefaultClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color {
 	if c.depth > renderer.maxDepth {
-		return NewColor(1, 1, 1)
+		return NewColor(0, 0, 0)
 	}
 	c.depth++
+	light := h.material.emittedLight()
 	// If material scatters, compute intersections with scattered ray and then call itself recursively
 	if b, result := h.material.scatter(r, h, c.rand); b {
 		if renderer.bvh.intersected(result.scattered, 0.0001, math.Inf(1), h) {
-			return renderer.closest(renderer, c, result.scattered, h).Blend(result.attenuation)
+			return light.Add(renderer.closest(renderer, c, result.scattered, h).Blend(result.attenuation))
 		} else {
-			return renderer.miss(renderer, c, result.scattered).Blend(result.attenuation)
+			return light.Add(renderer.miss(renderer, c, result.scattered).Blend(result.attenuation))
 		}
 	} else {
-		return result.attenuation
+		return light
 	}
 }
 
 type MissShader func(*Renderer, context, ray) Color
 
 func DefaultMissShader(renderer *Renderer, c context, r ray) Color {
-	return NewColor(1, 1, 1)
+	return NewColor(0, 0, 0)
 }
 
 type IntersectionCountShader func(count int) Color
@@ -62,7 +63,7 @@ func NewDefaultRenderer(bvh BVH, camera *Camera) *Renderer {
 		numCPU:            runtime.GOMAXPROCS(0),
 		maxDepth:          2,
 		bvh:               bvh,
-		spp:               100,
+		spp:               3000,
 		camera:            camera,
 		closest:           DefaultClosestHitShader,
 		miss:              DefaultMissShader,

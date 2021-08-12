@@ -17,6 +17,7 @@ type intersectable interface {
 	bounding() aabb
 }
 
+// TODO: Add rectangle
 type primitive interface {
 	intersectable
 	transformed(Matrix4) primitive
