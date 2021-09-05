@@ -9,6 +9,7 @@ func CornellBox() *Scene {
 	greenMat := Diffuse{Albedo: NewColor(.12, .45, .15)}
 	redMat := Diffuse{Albedo: NewColor(.65, .05, .05)}
 	lightMat := Light{Color: NewColor(5, 5, 5)}
+	glass := Refractive{Albedo: NewColor(1, 1, 1), Ratio: 1.5}
 
 	floor := NewSceneNode(NewMesh(cube, whiteMat))
 	floor.Scale(10, 1, 10)
@@ -43,11 +44,11 @@ func CornellBox() *Scene {
 	rightCube.Translate(-.6, .6, 0)
 	rightCube.Rotate(NewVector3(0, 1, 0), -5)
 
-	//sphere1 := Geometry{NewSphere(NewVector3(2, 2, 2), 1.5)}
-	//sphere2 := Geometry{NewSphere(NewVector3(-2, 2, -1), 1.5)}
+	sphere1 := Geometry{NewSphere(NewVector3(2, 2, 2), 1.5)}
+	sphere2 := Geometry{NewSphere(NewVector3(-2, 2, -1), 1.5)}
 
-	//leftSphere := NewSceneNode(NewMesh(sphere1, whiteMat))
-	//rightSphere := NewSceneNode(NewMesh(sphere2, whiteMat))
+	leftSphere := NewSceneNode(NewMesh(sphere1, glass))
+	rightSphere := NewSceneNode(NewMesh(sphere2, glass))
 
 	scene := NewScene()
 
@@ -57,9 +58,9 @@ func CornellBox() *Scene {
 	scene.Add(left)
 	scene.Add(right)
 	scene.Add(light)
-	//scene.Add(leftSphere)
-	//scene.Add(rightSphere)
-	scene.Add(leftCube)
-	scene.Add(rightCube)
+	scene.Add(leftSphere)
+	scene.Add(rightSphere)
+	//scene.Add(leftCube)
+	//scene.Add(rightCube)
 	return scene
 }

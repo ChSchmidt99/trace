@@ -63,7 +63,7 @@ func NewDefaultRenderer(bvh BVH, camera *Camera) *Renderer {
 		numCPU:            runtime.GOMAXPROCS(0),
 		maxDepth:          2,
 		bvh:               bvh,
-		spp:               3000,
+		spp:               300,
 		camera:            camera,
 		closest:           DefaultClosestHitShader,
 		miss:              DefaultMissShader,
@@ -145,6 +145,7 @@ func (r *Renderer) RenderToBuffer(buff Buffer) {
 	// TODO: Check if doing spp per pixel instead of per image is better
 	for i := 0; i < r.spp; i++ {
 		for y := 0; y < height; y++ {
+			// TODO: Check if not using worker pattern and instead rendering calculated lines is faster
 			jobs <- y
 		}
 	}
