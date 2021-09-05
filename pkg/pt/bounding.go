@@ -36,6 +36,15 @@ func enclosingSlice(indeces []int, primitives []tracable) aabb {
 	return enclosing
 }
 
+func enclosingSubtrees(nodes []*bvhNode) aabb {
+	enclosing := nodes[0].bounding
+	for i := 1; i < len(nodes); i++ {
+		enclosing.add(nodes[i].bounding)
+	}
+	enclosing.update()
+	return enclosing
+}
+
 func (bounding *aabb) update() {
 	min := bounding.bounds[0]
 	max := bounding.bounds[1]
@@ -43,6 +52,11 @@ func (bounding *aabb) update() {
 	bounding.width = max.X - min.X
 	bounding.height = max.Y - min.Y
 	bounding.depth = max.Z - min.Z
+}
+
+func (a aabb) surface() float64 {
+	// TODO: Cache surface
+	return 2*a.width*a.height + 2*a.width*a.depth + 2*a.height*a.depth
 }
 
 func (a aabb) add(b aabb) aabb {

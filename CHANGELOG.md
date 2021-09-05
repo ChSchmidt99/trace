@@ -5,6 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Implemented PHR BVH builder
 
 ## [0.0.3] - 2021-08-12
 ### Added
@@ -13,13 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Morton code computation 
 - Basic LBVH construction 
 - .obj file parser
-- light emitting materials 
+- Light emitting materials 
 
 ### Changed
-- partially fixed scene node transformation
-- split up primitive and tracable
-- transforming normal using transposed inverse of transformation matrix
-- fixed ApproxZero bug
+- Partially fixed scene node transformation
+- Split up primitive and tracable
+- Transforming normal using transposed inverse of transformation matrix
+- Fixed ApproxZero bug
 
 ## [0.0.2] - 2021-07-15
 ### Changed
@@ -27,8 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reusing Rays when scattering and casting new rays from camera for performance increase
 - Return scatter result as struct for performance increase
 - Hit records are now a c style out variable to save allocs
-- render worker channel is now buffered 
-- changed RandomInUnitSphere implementation to more efficient approach
+- Render worker channel is now buffered 
+- Changed RandomInUnitSphere implementation to more efficient approach
 
 ## [0.0.1] - 2021-07-15
 ### Added 

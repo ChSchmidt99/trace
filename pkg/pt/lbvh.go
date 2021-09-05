@@ -2,13 +2,18 @@ package pt
 
 import (
 	"math"
+	"runtime"
 	"sort"
 	"sync"
 )
 
 var MORTON_SIZE = uint32(math.Pow(2, 20))
 
-func buildLBVH(prims []tracable, enclosing aabb, threads int) BVH {
+func DefaultLBVH(prims []tracable) BVH {
+	return LBVH(prims, enclosing(prims), runtime.GOMAXPROCS(0))
+}
+
+func LBVH(prims []tracable, enclosing aabb, threads int) BVH {
 	paris := assignMortonCodes(prims, enclosing, MORTON_SIZE, threads)
 	sortPairs(paris, threads)
 	bvh := constructLBVH(paris, MORTON_SIZE, threads)

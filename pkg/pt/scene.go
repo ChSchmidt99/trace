@@ -16,7 +16,8 @@ func (s *Scene) Add(node *SceneNode) {
 
 func (s *Scene) Compile() BVH {
 	prims := s.root.collectTracables(IdentityMatrix())
-	return NewBVH(prims)
+	return DefaultLBVH(prims)
+	//return DefaultPHR(prims)
 }
 
 type SceneNode struct {

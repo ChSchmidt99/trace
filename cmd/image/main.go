@@ -10,21 +10,17 @@ import (
 const (
 	ASPECT_RATIO = 4.0 / 3
 	FOV          = 50.0
-	RESOLUTION   = 720
+	RESOLUTION   = 200
 )
 
 func main() {
-
 	camera := NewCamera(ASPECT_RATIO, FOV, CameraTransformation{
-		//LookFrom: NewVector3(7, 6, 10),
 		LookFrom: NewVector3(0, 5, -12),
 		LookAt:   NewVector3(0, 5, 5),
 		Up:       NewVector3(0, 1, 0),
 	})
 
 	scene := demo.CornellBox()
-	//scene := demo.DiffuseTest()
-
 	bvh := scene.Compile()
 	renderer := NewDefaultRenderer(bvh, camera)
 	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)

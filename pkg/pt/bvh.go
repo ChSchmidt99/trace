@@ -1,17 +1,12 @@
 package pt
 
 import (
-	"runtime"
 	"sync"
 )
 
 type BVH struct {
 	root  *bvhNode
 	prims []tracable
-}
-
-func NewBVH(prims []tracable) BVH {
-	return buildLBVH(prims, enclosing(prims), runtime.GOMAXPROCS(0))
 }
 
 // Number of intersection tests executed for given ray, including node bounding boxes and leaf primitives
@@ -128,6 +123,19 @@ func newLeaf(prims []int) *bvhNode {
 func (node *bvhNode) addChild(child *bvhNode, index int) {
 	node.children[index] = child
 	child.parent = node
+}
+
+func (node *bvhNode) subtreeSize() int {
+	// TODO: Cache subtreeSize
+	if node.isLeaf {
+		return 1
+	}
+
+	sum := 1
+	for _, child := range node.children {
+		sum += child.subtreeSize()
+	}
+	return sum
 }
 
 func (node *bvhNode) collectLeaves(acc *[]*bvhNode) {
