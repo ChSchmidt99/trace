@@ -30,7 +30,7 @@ func enclosingSlice(indeces []int, primitives []tracable) aabb {
 	enclosing := primitives[indeces[0]].bounding()
 	for i := 1; i < len(indeces); i++ {
 		prim := primitives[indeces[i]]
-		enclosing.add(prim.bounding())
+		enclosing = enclosing.add(prim.bounding())
 	}
 	enclosing.update()
 	return enclosing
@@ -39,7 +39,7 @@ func enclosingSlice(indeces []int, primitives []tracable) aabb {
 func enclosingSubtrees(nodes []*bvhNode) aabb {
 	enclosing := nodes[0].bounding
 	for i := 1; i < len(nodes); i++ {
-		enclosing.add(nodes[i].bounding)
+		enclosing = enclosing.add(nodes[i].bounding)
 	}
 	enclosing.update()
 	return enclosing

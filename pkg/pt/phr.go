@@ -9,7 +9,7 @@ import (
 
 // TODO: Refactoring
 func DefaultPHR(primitives []tracable) BVH {
-	return PHR(primitives, enclosing(primitives), 0.5, 6, 2, runtime.GOMAXPROCS(0))
+	return PHR(primitives, enclosing(primitives), 0.5, 6, 4, runtime.GOMAXPROCS(0))
 }
 
 // alpha: How quickly cut size will shrink
@@ -246,6 +246,7 @@ func (p *phr) splitPHRcutAlternative(cut *phrCut) (l *phrCut, r *phrCut) {
 			right = cut.nodes[iZ:]
 		}
 	}
+	// TODO: Add no splitting?
 	letfBounding := enclosingSubtrees(left)
 	rightBounding := enclosingSubtrees(right)
 	return &phrCut{left, letfBounding}, &phrCut{right, rightBounding}
