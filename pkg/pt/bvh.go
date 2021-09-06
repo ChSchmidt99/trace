@@ -2,6 +2,7 @@ package pt
 
 import (
 	"sync"
+	"sync/atomic"
 )
 
 type BVH struct {
@@ -91,14 +92,13 @@ func (bvh *BVH) collectLeaves() []*bvhNode {
 	return acc
 }
 
-// TODO: Test interface bvh and compare performance
 type bvhNode struct {
 	parent       *bvhNode
 	prims        []int
 	children     []*bvhNode
 	bounding     aabb
 	m            *sync.Mutex
-	childAABBset int
+	childAABBset uint32
 	isLeaf       bool
 	size         int
 }
@@ -144,19 +144,12 @@ func (node *bvhNode) collectLeaves(acc *[]*bvhNode) {
 	}
 }
 
-// TODO: rethink function, maybe using a channel and pushing all ready nodes makes more sense
 func (node *bvhNode) updateAABB(primitives []tracable) {
 	if node.isLeaf {
 		node.bounding = enclosingSlice(node.prims, primitives)
-		// TODO: use atomic.CompareAndSwapUint32
-		node.parent.m.Lock()
-		node.parent.childAABBset++
-		if node.parent.childAABBset%len(node.parent.children) == 0 {
-			node.parent.m.Unlock()
+		if atomic.AddUint32(&node.parent.childAABBset, 1)%uint32(len(node.parent.children)) == 0 {
 			node.parent.updateAABB(primitives)
-			return
 		}
-		node.parent.m.Unlock()
 		return
 	}
 	node.bounding = node.children[0].bounding
@@ -167,14 +160,9 @@ func (node *bvhNode) updateAABB(primitives []tracable) {
 	if node.parent == nil {
 		return
 	}
-	node.parent.m.Lock()
-	node.parent.childAABBset++
-	if node.parent.childAABBset%2 == 0 {
-		node.parent.m.Unlock()
+	if atomic.AddUint32(&node.parent.childAABBset, 1)%uint32(len(node.parent.children)) == 0 {
 		node.parent.updateAABB(primitives)
-		return
 	}
-	node.parent.m.Unlock()
 }
 
 type bvhStack struct {

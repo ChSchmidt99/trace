@@ -65,7 +65,6 @@ func (b *PixelBuffer) w() int {
 	return b.Width
 }
 
-// TODO: only temporary, remove and write ImageBuffer instead
 func (b *PixelBuffer) ToImage() image.Image {
 	topLeft := image.Point{0, 0}
 	bottomRight := image.Point{b.Width, b.Height}
