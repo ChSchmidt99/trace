@@ -10,7 +10,7 @@ import (
 var MORTON_SIZE = uint32(math.Pow(2, 20))
 
 func DefaultLBVH(prims []tracable) BVH {
-	return LBVH(prims, enclosing(prims), runtime.GOMAXPROCS(0))
+	return LBVH(prims, Enclosing(prims), runtime.GOMAXPROCS(0))
 }
 
 func LBVH(prims []tracable, enclosing aabb, threads int) BVH {

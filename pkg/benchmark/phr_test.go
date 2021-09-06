@@ -3,6 +3,7 @@ package benchmark
 import (
 	"github/chschmidt99/pt/demoscenes"
 	"github/chschmidt99/pt/pkg/pt"
+	"runtime"
 	"testing"
 )
 
@@ -23,5 +24,15 @@ func BenchmarkPHRRender(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		renderer.RenderToBuffer(buff)
+	}
+}
+
+func BenchmarkPHRBuild(b *testing.B) {
+	scene, _ := demoscenes.Bunny(AR, FOV)
+	tracables := scene.Tracables()
+	bounding := pt.Enclosing(tracables)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		pt.PHR(tracables, bounding, ALPHA, DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
 	}
 }

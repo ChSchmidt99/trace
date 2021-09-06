@@ -10,7 +10,7 @@ import (
 func BenchmarkPHRBuild(b *testing.B) {
 	geometry := ParseFromPath("../../assets/deer.obj")
 	tracables := NewMesh(geometry, nil).transformed(IdentityMatrix())
-	bounding := enclosing(tracables)
+	bounding := Enclosing(tracables)
 	aux := LBVH(tracables, bounding, runtime.GOMAXPROCS(0))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -21,7 +21,7 @@ func BenchmarkPHRBuild(b *testing.B) {
 func TestFindInitialCut(t *testing.T) {
 	geometry := ParseFromPath("../../assets/deer.obj")
 	tracables := NewMesh(geometry, nil).transformed(IdentityMatrix())
-	bounding := enclosing(tracables)
+	bounding := Enclosing(tracables)
 	aux := LBVH(tracables, bounding, runtime.GOMAXPROCS(0))
 	p := phr{
 		s:               bounding.surface(),

@@ -9,7 +9,7 @@ import (
 
 // TODO: Refactoring
 func DefaultPHR(primitives []tracable) BVH {
-	return PHR(primitives, enclosing(primitives), 0.5, 6, 4, runtime.GOMAXPROCS(0))
+	return PHR(primitives, Enclosing(primitives), 0.5, 6, 4, runtime.GOMAXPROCS(0))
 }
 
 // alpha: How quickly cut size will shrink

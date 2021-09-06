@@ -28,7 +28,12 @@ func (s *Scene) CompileLBVH() BVH {
 
 func (s *Scene) CompilePHR(alpha float64, delta, branchingFactor int) BVH {
 	prims := s.root.collectTracables(IdentityMatrix())
-	return PHR(prims, enclosing(prims), alpha, delta, branchingFactor, runtime.GOMAXPROCS(0))
+	return PHR(prims, Enclosing(prims), alpha, delta, branchingFactor, runtime.GOMAXPROCS(0))
+}
+
+// TODO: Hide Tracables?
+func (s *Scene) Tracables() []tracable {
+	return s.root.collectTracables(IdentityMatrix())
 }
 
 type SceneNode struct {
