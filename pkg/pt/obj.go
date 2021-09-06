@@ -41,7 +41,6 @@ func parseOBJ(objFile *os.File) []primitive {
 				vertecies = append(vertecies, NewVector3(numbers[0], numbers[1], numbers[2]))
 			}
 		case "vt":
-			// TODO: Implement when needed
 		case "vn":
 			if numbers, err := parseFloat(values); err != nil {
 				panic(err)

@@ -42,20 +42,18 @@ func (bvh *BVH) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	stack := bvhStack{}
 	stack.push(bvh.root)
 	didHit := false
-	closest := tMax
+	hitOut.t = tMax
 	for {
 		node := stack.pop()
 		if node == nil {
 			return didHit
 		}
-		if node.bounding.intersected(ray, tMin, closest) {
+		if node.bounding.intersected(ray, tMin, hitOut.t) {
 			if node.isLeaf {
 				for i := 0; i < len(node.prims); i++ {
 					prim := bvh.prims[node.prims[i]]
-					if prim.intersected(ray, tMin, closest, hitOut) {
+					if prim.intersected(ray, tMin, hitOut.t, hitOut) {
 						didHit = true
-						// TODO: Can setting closest be avoided by using hitOut.t?
-						closest = hitOut.t
 					}
 				}
 			} else {

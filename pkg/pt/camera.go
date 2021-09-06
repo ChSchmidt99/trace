@@ -68,32 +68,6 @@ type ray struct {
 	sign         [3]int
 }
 
-func newRay(origin Vector3, direction Vector3) ray {
-	invDirection := direction.Inverse()
-	sign := [3]int{}
-
-	if invDirection.X < 0 {
-		sign[0] = 1
-	}
-	if invDirection.Y < 0 {
-		sign[1] = 1
-	}
-	if invDirection.Z < 0 {
-		sign[2] = 1
-	}
-
-	dirNormSq := direction.LengthSquared()
-
-	return ray{
-		origin:       origin,
-		direction:    direction,
-		invDirection: invDirection,
-		//unitDir:        direction.Unit(),
-		dirNormSquared: dirNormSq,
-		sign:           sign,
-	}
-}
-
 func (r ray) Position(t float64) Vector3 {
 	magnitude := r.direction.Mul(t)
 	return r.origin.Add(magnitude)

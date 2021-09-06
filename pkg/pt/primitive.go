@@ -23,7 +23,6 @@ type primitive interface {
 	transformed(Matrix4) primitive
 }
 
-// TODO: Is there a better way, than to add mat to primitives?
 type Sphere struct {
 	center Vector3
 	radius float64

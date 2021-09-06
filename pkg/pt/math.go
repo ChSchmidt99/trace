@@ -92,8 +92,6 @@ func (v1 Vector3) Unit() Vector3 {
 }
 
 func (v Vector3) ApproxZero() bool {
-	// Coparison "hard coded" because it's twice as fast as calling ApproxZero()
-
 	// TODO: Replace ABS by using comparisions only?
 	return math.Abs(v.X) <= APPROX_THRESH && math.Abs(v.Y) <= APPROX_THRESH && math.Abs(v.Z) <= APPROX_THRESH
 }
