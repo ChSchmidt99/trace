@@ -18,7 +18,8 @@ func (s *Scene) Add(node *SceneNode) {
 
 func (s *Scene) Compile() BVH {
 	prims := s.root.collectTracables(IdentityMatrix())
-	return DefaultPHR(prims)
+	builder := NewDefaultBuilder(prims)
+	return builder.Build()
 }
 
 func (s *Scene) CompileLBVH() BVH {
@@ -28,7 +29,8 @@ func (s *Scene) CompileLBVH() BVH {
 
 func (s *Scene) CompilePHR(alpha float64, delta, branchingFactor int) BVH {
 	prims := s.root.collectTracables(IdentityMatrix())
-	return PHR(prims, Enclosing(prims), alpha, delta, branchingFactor, runtime.GOMAXPROCS(0))
+	builder := NewPHRBuilder(prims, alpha, delta, branchingFactor, runtime.GOMAXPROCS(0))
+	return builder.Build()
 }
 
 // TODO: Hide Tracables?

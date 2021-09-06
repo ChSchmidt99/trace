@@ -7,32 +7,53 @@ import (
 	"sync"
 )
 
-// TODO: Refactoring
-func DefaultPHR(primitives []tracable) BVH {
-	return PHR(primitives, Enclosing(primitives), 0.5, 6, 4, runtime.GOMAXPROCS(0))
+type PhrBuilder struct {
+	Alpha           float64 // How quickly cut size will shrink
+	Delta           int     // Determines size of initial cut
+	BranchingFactor int
+	Threshold       AreaThreshold
+	Split           SplitFunction
+	jobs            chan *phrJob
+	threadCount     int
+	primitives      []tracable
+	enclosing       aabb
+	surface         float64
 }
 
-// alpha: How quickly cut size will shrink
-// delta: Size of initial cut for d = 0
-func PHR(primitives []tracable, enclosing aabb, alpha float64, delta int, branchingFactor int, threadCount int) BVH {
-	auxilaryBVH := LBVH(primitives, enclosing, threadCount)
-	return buildFromAuxilary(primitives, auxilaryBVH, enclosing, alpha, delta, branchingFactor, threadCount)
+func NewDefaultBuilder(primitives []tracable) PhrBuilder {
+	return NewPHRBuilder(primitives, 0.5, 6, 4, runtime.GOMAXPROCS(0))
 }
 
-func buildFromAuxilary(primitives []tracable, auxilaryBVH BVH, enclosing aabb, alpha float64, delta int, branchingFactor int, threadCount int) BVH {
-
-	p := phr{
-		s:               enclosing.surface(),
-		alpha:           alpha,
-		delta:           delta,
-		branchingFactor: branchingFactor,
-		jobs:            make(chan *phrJob, threadCount),
+func NewPHRBuilder(primitives []tracable, alpha float64, delta int, branchingFactor int, threadCount int) PhrBuilder {
+	box := enclosing(primitives)
+	return PhrBuilder{
+		Alpha:           alpha,
+		Delta:           delta,
+		BranchingFactor: branchingFactor,
+		Threshold:       DefaultThreshold,
+		Split:           SweepSAH,
 		primitives:      primitives,
+		threadCount:     threadCount,
+		enclosing:       box,
+		surface:         box.surface(),
 	}
-	cut := p.findInitialCut(auxilaryBVH)
+}
 
+func (p PhrBuilder) Build() BVH {
+	auxilaryBVH := LBVH(p.primitives, p.enclosing, p.threadCount)
+	return p.BuildFromAuxilary(auxilaryBVH)
+}
+
+func (p PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
+
+	// Determin initial cut
+	//cut := p.findInitialCut(auxilaryBVH)
+	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
+
+	// Start workers
 	wg := sync.WaitGroup{}
-	for i := 0; i < threadCount; i++ {
+	p.jobs = make(chan *phrJob, p.threadCount)
+	for i := 0; i < p.threadCount; i++ {
 		go func() {
 			for job := range p.jobs {
 				p.buildSubTree(job, &wg)
@@ -40,58 +61,61 @@ func buildFromAuxilary(primitives []tracable, auxilaryBVH BVH, enclosing aabb, a
 		}()
 	}
 
+	// Temporary branch as a starting point, will be discared afterwards
 	temp := newBranch(1)
-	temp.bounding = enclosing
-
+	temp.bounding = p.enclosing
 	wg.Add(1)
+
+	// Start initial job
 	p.queueJob(&phrJob{
 		depth:      1,
 		cut:        cut,
 		parent:     temp,
 		childIndex: 0,
 	}, &wg)
+
+	// Wait until tree is built
 	wg.Wait()
 	close(p.jobs)
 
 	temp.children[0].parent = nil
 	return BVH{
 		root:  temp.children[0],
-		prims: primitives,
+		prims: p.primitives,
 	}
 }
 
 type phrJob struct {
 	depth      int
-	cut        *phrCut
+	cut        phrCut
 	parent     *bvhNode
 	childIndex int
 }
 
-type phrCut struct {
-	nodes    []*bvhNode
-	bounding aabb
+func (p PhrBuilder) queueJob(job *phrJob, wg *sync.WaitGroup) {
+	// Pass job to channel if there is capacity left, otherwise process it directly
+	select {
+	case p.jobs <- job:
+	default:
+		p.buildSubTree(job, wg)
+	}
 }
 
-type phr struct {
-	s               float64
-	alpha           float64
-	delta           int
-	branchingFactor int
-	jobs            chan *phrJob
-	primitives      []tracable
-}
-
-func (p *phr) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
+func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	// Termination criteria, if only one node is left, add it and return
 	if len(job.cut.nodes) <= 1 {
 		job.parent.addChild(job.cut.nodes[0], job.childIndex)
 		return
 	}
 
-	cuts := make([]*phrCut, 0, p.branchingFactor)
+	cuts := make([]phrCut, 0, p.BranchingFactor)
 	cuts = append(cuts, job.cut)
 
-	for len(cuts) < p.branchingFactor {
+	// Keep splitting cut until enough nodes to branch the tree are found
+	for len(cuts) < p.BranchingFactor {
+		// Find the biggest cut
 		max := 0
 		maxI := 0
 		for i, cut := range cuts {
@@ -100,19 +124,23 @@ func (p *phr) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 				maxI = i
 			}
 		}
+		// If the biggest cut has size = 1, no more cuts can be split => break
 		if max <= 1 {
 			break
 		}
-		left, right := p.splitPHRcutAlternative(cuts[maxI])
+		// Split biggest cut
+		left, right := p.Split(cuts[maxI])
 		cuts[maxI] = p.refined(left, job.depth)
 		cuts = append(cuts, p.refined(right, job.depth))
 	}
 
+	// Create a new BVH branch
 	branch := newBranch(len(cuts))
 	branch.parent = job.parent
 	branch.bounding = job.cut.bounding
 	job.parent.addChild(branch, job.childIndex)
 
+	// Queue all new children to be processed by this or any other thread
 	wg.Add(len(cuts))
 	for i, cut := range cuts {
 		p.queueJob(&phrJob{
@@ -124,19 +152,7 @@ func (p *phr) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	}
 }
 
-func (p *phr) queueJob(job *phrJob, wg *sync.WaitGroup) {
-	select {
-	case p.jobs <- job:
-	default:
-		p.buildSubTree(job, wg)
-	}
-}
-
-func (p *phr) areaThreshold(treeDepth int) float64 {
-	return p.s / math.Pow(2, p.alpha*float64(treeDepth)+float64(p.delta))
-}
-
-func (p *phr) findInitialCutParallel(auxilary BVH, threadCount int) *phrCut {
+func (p PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
 	queue := make(chan *bvhNode, 1024)
 	cut := phrCut{
 		bounding: auxilary.root.bounding,
@@ -147,12 +163,14 @@ func (p *phr) findInitialCutParallel(auxilary BVH, threadCount int) *phrCut {
 		go func() {
 			for node := range queue {
 				if node.isLeaf {
+					// Add node to cut, if it is a leaf
 					m.Lock()
 					cut.nodes = append(cut.nodes, node)
 					m.Unlock()
 					wg.Done()
 				} else {
-					if node.bounding.surface() > p.areaThreshold(0) {
+					// Add children to queue, if
+					if node.bounding.surface() > p.Threshold(p.surface, p.Alpha, p.Delta, 0) {
 						wg.Add(len(node.children) - 1)
 						for _, child := range node.children {
 							queue <- child
@@ -171,79 +189,54 @@ func (p *phr) findInitialCutParallel(auxilary BVH, threadCount int) *phrCut {
 	wg.Add(1)
 	wg.Wait()
 	close(queue)
-	return &cut
+	return cut
 }
 
-func (p *phr) findInitialCut(lbvh BVH) *phrCut {
-	queue := queue{}
-	queue.push(lbvh.root)
-	currentCut := &phrCut{
-		bounding: lbvh.root.bounding,
-	}
-
-	for queue.length > 0 {
-		node := queue.popFirst()
+func (p PhrBuilder) refined(cut phrCut, depth int) phrCut {
+	refinedCut := make([]*bvhNode, 0, len(cut.nodes))
+	for _, node := range cut.nodes {
 		if node.isLeaf {
-			currentCut.nodes = append(currentCut.nodes, node)
-		} else {
-			if node.bounding.surface() > p.areaThreshold(0) {
-				for _, child := range node.children {
-					queue.push(child)
+			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, depth) {
+				refinedCut = append(refinedCut, node)
+			} else {
+				for _, prim := range node.prims {
+					leaf := newLeaf([]int{prim})
+					leaf.bounding = p.primitives[prim].bounding()
+					refinedCut = append(refinedCut, leaf)
 				}
-				continue
 			}
-			currentCut.nodes = append(currentCut.nodes, node)
+		} else {
+			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, depth) {
+				// Keep node in cut
+				refinedCut = append(refinedCut, node)
+			} else {
+				// Replace node with children
+				refinedCut = append(refinedCut, node.children...)
+			}
 		}
 	}
-	return currentCut
-}
-
-func (p *phr) splitPHRcut(cut *phrCut) (left *phrCut, right *phrCut) {
-
-	sort.SliceStable(cut.nodes, func(i, j int) bool {
-		return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
-	})
-	minX, iX := minCost(cut.nodes)
-
-	sort.SliceStable(cut.nodes, func(i, j int) bool {
-		return cut.nodes[i].bounding.barycenter.Y < cut.nodes[j].bounding.barycenter.Y
-	})
-	minY, iY := minCost(cut.nodes)
-
-	sort.SliceStable(cut.nodes, func(i, j int) bool {
-		return cut.nodes[i].bounding.barycenter.Z < cut.nodes[j].bounding.barycenter.Z
-	})
-	minZ, iZ := minCost(cut.nodes)
-
-	if minZ < minX && minZ < minY {
-		left := cut.nodes[:iZ]
-		letfBounding := enclosingSubtrees(left)
-		right := cut.nodes[iZ:]
-		rightBounding := enclosingSubtrees(right)
-		return &phrCut{left, letfBounding}, &phrCut{right, rightBounding}
-	}
-	if minX < minY && minX < minZ {
-		sort.SliceStable(cut.nodes, func(i, j int) bool {
-			return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
-		})
-		left := cut.nodes[:iX]
-		letfBounding := enclosingSubtrees(left)
-		right := cut.nodes[iX:]
-		rightBounding := enclosingSubtrees(right)
-		return &phrCut{left, letfBounding}, &phrCut{right, rightBounding}
-	} else {
-		sort.SliceStable(cut.nodes, func(i, j int) bool {
-			return cut.nodes[i].bounding.barycenter.Y < cut.nodes[j].bounding.barycenter.Y
-		})
-		left := cut.nodes[:iY]
-		letfBounding := enclosingSubtrees(left)
-		right := cut.nodes[iY:]
-		rightBounding := enclosingSubtrees(right)
-		return &phrCut{left, letfBounding}, &phrCut{right, rightBounding}
+	return phrCut{
+		nodes:    refinedCut,
+		bounding: cut.bounding,
 	}
 }
 
-func (p *phr) splitPHRcutAlternative(cut *phrCut) (l *phrCut, r *phrCut) {
+type AreaThreshold func(surface float64, alpha float64, delta int, depth int) float64
+
+func DefaultThreshold(surface float64, alpha float64, delta int, depth int) float64 {
+	return surface / math.Pow(2, alpha*float64(depth)+float64(delta))
+}
+
+type phrCut struct {
+	nodes    []*bvhNode
+	bounding aabb
+}
+
+type SplitFunction func(phrCut) (phrCut, phrCut)
+
+// TODO: Rework Sweep SAH
+// TODO: Implement Bucket SAH
+func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 	sort.SliceStable(cut.nodes, func(i, j int) bool {
 		return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
 	})
@@ -282,40 +275,9 @@ func (p *phr) splitPHRcutAlternative(cut *phrCut) (l *phrCut, r *phrCut) {
 			right = cut.nodes[iZ:]
 		}
 	}
-	// TODO: Add no splitting?
 	letfBounding := enclosingSubtrees(left)
 	rightBounding := enclosingSubtrees(right)
-	return &phrCut{left, letfBounding}, &phrCut{right, rightBounding}
-}
-
-func (p *phr) refined(cut *phrCut, depth int) *phrCut {
-	refinedCut := make([]*bvhNode, 0, len(cut.nodes))
-	for _, node := range cut.nodes {
-		if node.isLeaf {
-			if node.bounding.surface() < p.areaThreshold(depth) {
-				refinedCut = append(refinedCut, node)
-			} else {
-				// TODO: Rethink, is it better to add primitives?
-				for _, prim := range node.prims {
-					leaf := newLeaf([]int{prim})
-					leaf.bounding = p.primitives[prim].bounding()
-					refinedCut = append(refinedCut, leaf)
-				}
-			}
-		} else {
-			if node.bounding.surface() < p.areaThreshold(depth) {
-				// Keep node in cut
-				refinedCut = append(refinedCut, node)
-			} else {
-				// Replace node with children
-				refinedCut = append(refinedCut, node.children...)
-			}
-		}
-	}
-	return &phrCut{
-		nodes:    refinedCut,
-		bounding: cut.bounding,
-	}
+	return phrCut{left, letfBounding}, phrCut{right, rightBounding}
 }
 
 func minCost(sortedNodes []*bvhNode) (min float64, splitIndex int) {
@@ -341,55 +303,10 @@ func sahCost(leftCut []*bvhNode, rightCut []*bvhNode) float64 {
 	return leftSurface*float64(leftNodeCount) + rightSurface*float64(rightNodeCount)
 }
 
-// TODO: Make size available better?
 func nodeCount(subtrees []*bvhNode) int {
 	sum := 0
 	for _, node := range subtrees {
 		sum += node.subtreeSize()
 	}
 	return sum
-}
-
-type queue struct {
-	length int
-	first  *queueEntry
-}
-
-func (q *queue) push(node *bvhNode) {
-	entry := queueEntry{value: node}
-	if q.first == nil {
-		q.first = &entry
-		q.length = 1
-		return
-	}
-	q.length++
-	q.first.append(&entry)
-}
-
-func (q *queue) popFirst() *bvhNode {
-	if q.first == nil {
-		q.length = 0
-		return nil
-	}
-	q.length--
-	entry := q.first
-	if entry.next != nil {
-		q.first = entry.next
-	} else {
-		q.first = nil
-	}
-	return entry.value
-}
-
-type queueEntry struct {
-	next  *queueEntry
-	value *bvhNode
-}
-
-func (e *queueEntry) append(entry *queueEntry) {
-	if e.next == nil {
-		e.next = entry
-		return
-	}
-	e.next.append(entry)
 }

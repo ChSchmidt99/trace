@@ -16,8 +16,7 @@ func newAABB(min, max Vector3) aabb {
 	return bouding
 }
 
-// TODO: Hide Enclosing?
-func Enclosing(primitives []tracable) aabb {
+func enclosing(primitives []tracable) aabb {
 	enclosing := primitives[0].bounding()
 	for i := 1; i < len(primitives); i++ {
 		enclosing = enclosing.add(primitives[i].bounding())

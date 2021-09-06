@@ -31,9 +31,9 @@ func BenchmarkPHRRender(b *testing.B) {
 func BenchmarkPHRBuild(b *testing.B) {
 	scene, _ := demoscenes.Bunny(AR, FOV)
 	tracables := scene.Tracables()
-	bounding := pt.Enclosing(tracables)
+	builder := pt.NewPHRBuilder(tracables, ALPHA, DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		pt.PHR(tracables, bounding, ALPHA, DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		builder.Build()
 	}
 }
