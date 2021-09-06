@@ -103,6 +103,7 @@ type bvhNode struct {
 	m            *sync.Mutex
 	childAABBset int
 	isLeaf       bool
+	size         int
 }
 
 func newBranch(children int) *bvhNode {
@@ -117,6 +118,7 @@ func newLeaf(prims []int) *bvhNode {
 	return &bvhNode{
 		prims:  prims,
 		isLeaf: true,
+		size:   1,
 	}
 }
 
@@ -126,16 +128,13 @@ func (node *bvhNode) addChild(child *bvhNode, index int) {
 }
 
 func (node *bvhNode) subtreeSize() int {
-	// TODO: Cache subtreeSize
-	if node.isLeaf {
-		return 1
+	if node.size == 0 {
+		node.size = 1
+		for _, child := range node.children {
+			node.size += child.subtreeSize()
+		}
 	}
-
-	sum := 1
-	for _, child := range node.children {
-		sum += child.subtreeSize()
-	}
-	return sum
+	return node.size
 }
 
 func (node *bvhNode) collectLeaves(acc *[]*bvhNode) {

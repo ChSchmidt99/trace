@@ -17,7 +17,6 @@ func newAABB(min, max Vector3) aabb {
 }
 
 // TODO: Hide Enclosing?
-// TODO: Reuse AABB with out ptr
 func Enclosing(primitives []tracable) aabb {
 	enclosing := primitives[0].bounding()
 	for i := 1; i < len(primitives); i++ {
