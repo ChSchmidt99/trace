@@ -21,50 +21,52 @@ func newAABB(min, max Vector3) aabb {
 
 // TODO: Hide Enclosing?
 func Enclosing(primitives []tracable) aabb {
+	enclosing := primitives[0].bounding()
+	for i := 1; i < len(primitives); i++ {
+		enclosing = enclosing.add(primitives[i].bounding())
+	}
+	return enclosing
 	/*
 		enclosing := primitives[0].bounding()
 		for i := 1; i < len(primitives); i++ {
-			enclosing = enclosing.add(primitives[i].bounding())
+			enclosing.addPtr(primitives[i].bounding())
 		}
 		return enclosing
 	*/
-	enclosing := primitives[0].bounding()
-	for i := 1; i < len(primitives); i++ {
-		enclosing.addPtr(primitives[i].bounding())
-	}
-	return enclosing
 }
 
 func enclosingSlice(indeces []int, primitives []tracable) aabb {
+
+	enclosing := primitives[indeces[0]].bounding()
+	for i := 1; i < len(indeces); i++ {
+		prim := primitives[indeces[i]]
+		enclosing = enclosing.add(prim.bounding())
+	}
+	return enclosing
 	/*
 		enclosing := primitives[indeces[0]].bounding()
 		for i := 1; i < len(indeces); i++ {
 			prim := primitives[indeces[i]]
-			enclosing = enclosing.add(prim.bounding())
+			enclosing.addPtr(prim.bounding())
 		}
 		return enclosing
 	*/
-	enclosing := primitives[indeces[0]].bounding()
-	for i := 1; i < len(indeces); i++ {
-		prim := primitives[indeces[i]]
-		enclosing.addPtr(prim.bounding())
-	}
-	return enclosing
 }
 
 func enclosingSubtrees(nodes []*bvhNode) aabb {
+
+	enclosing := nodes[0].bounding
+	for i := 1; i < len(nodes); i++ {
+		enclosing = enclosing.add(nodes[i].bounding)
+	}
+	return enclosing
 	/*
-		enclosing := nodes[0].bounding
+		enclosing := nodes[0].bounding.copy()
 		for i := 1; i < len(nodes); i++ {
-			enclosing = enclosing.add(nodes[i].bounding)
+			enclosing.addPtr(nodes[i].bounding)
 		}
 		return enclosing
 	*/
-	enclosing := nodes[0].bounding.copy()
-	for i := 1; i < len(nodes); i++ {
-		enclosing.addPtr(nodes[i].bounding)
-	}
-	return enclosing
 }
 
 func (bounding *aabb) update() {

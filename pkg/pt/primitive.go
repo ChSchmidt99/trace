@@ -27,12 +27,17 @@ type primitive interface {
 type Sphere struct {
 	center Vector3
 	radius float64
+	box    aabb
 }
 
 func NewSphere(center Vector3, radius float64) *Sphere {
+	radVec := NewVector3(radius, radius, radius)
+	min := center.Sub(radVec)
+	max := center.Add(radVec)
 	return &Sphere{
 		center: center,
 		radius: radius,
+		box:    newAABB(min, max),
 	}
 }
 
@@ -42,11 +47,7 @@ func (s *Sphere) transformed(t Matrix4) primitive {
 }
 
 func (s *Sphere) bounding() aabb {
-	// TODO: Cache!
-	radVec := NewVector3(s.radius, s.radius, s.radius)
-	min := s.center.Sub(radVec)
-	max := s.center.Add(radVec)
-	return newAABB(min, max)
+	return s.box
 }
 
 func (s *Sphere) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
@@ -88,6 +89,7 @@ type vertex struct {
 
 type Triangle struct {
 	vertecies [3]vertex
+	box       aabb
 
 	// Precalculate v0v1 and v0v2 as it's used
 	v0v1 Vector3
@@ -95,7 +97,13 @@ type Triangle struct {
 }
 
 func NewTriangle(vertecies [3]vertex) *Triangle {
+	x := [3]float64{vertecies[0].position.X, vertecies[1].position.X, vertecies[2].position.X}
+	y := [3]float64{vertecies[0].position.Y, vertecies[1].position.Y, vertecies[2].position.Y}
+	z := [3]float64{vertecies[0].position.Z, vertecies[1].position.Z, vertecies[2].position.Z}
+	min := NewVector3(Min3(x), Min3(y), Min3(z))
+	max := NewVector3(Max3(x), Max3(y), Max3(z))
 	return &Triangle{
+		box:       newAABB(min, max),
 		vertecies: vertecies,
 		v0v1:      vertecies[1].position.Sub(vertecies[0].position),
 		v0v2:      vertecies[2].position.Sub(vertecies[0].position),
@@ -127,13 +135,7 @@ func calcNormal(point Vector3, right Vector3, left Vector3) Vector3 {
 }
 
 func (t *Triangle) bounding() aabb {
-	// TODO: Cache!
-	x := [3]float64{t.vertecies[0].position.X, t.vertecies[1].position.X, t.vertecies[2].position.X}
-	y := [3]float64{t.vertecies[0].position.Y, t.vertecies[1].position.Y, t.vertecies[2].position.Y}
-	z := [3]float64{t.vertecies[0].position.Z, t.vertecies[1].position.Z, t.vertecies[2].position.Z}
-	min := NewVector3(Min3(x), Min3(y), Min3(z))
-	max := NewVector3(Max3(x), Max3(y), Max3(z))
-	return newAABB(min, max)
+	return t.box
 }
 
 // Takes u and v barycentric coordinates and returns the normal at point p

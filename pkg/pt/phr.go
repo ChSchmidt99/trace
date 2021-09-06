@@ -175,7 +175,6 @@ func (p *phr) findInitialCutParallel(auxilary BVH, threadCount int) *phrCut {
 }
 
 func (p *phr) findInitialCut(lbvh BVH) *phrCut {
-	// TODO: Paralellize?
 	queue := queue{}
 	queue.push(lbvh.root)
 	currentCut := &phrCut{
