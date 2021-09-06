@@ -10,7 +10,7 @@ import (
 const (
 	ASPECT_RATIO = 4.0 / 3
 	FOV          = 50.0
-	RESOLUTION   = 200
+	RESOLUTION   = 1080
 )
 
 func main() {

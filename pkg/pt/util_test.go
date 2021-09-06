@@ -1,11 +1,6 @@
 package pt
 
-import (
-	"math/rand"
-	"testing"
-	"time"
-)
-
+/*
 func BenchmarkRandomVec(b *testing.B) {
 	b.Run("New", func(b *testing.B) {
 		r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -23,3 +18,4 @@ func BenchmarkRandomVec(b *testing.B) {
 		}
 	})
 }
+*/

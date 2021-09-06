@@ -63,7 +63,7 @@ func NewDefaultRenderer(bvh BVH, camera *Camera) *Renderer {
 		numCPU:            runtime.GOMAXPROCS(0),
 		maxDepth:          2,
 		bvh:               bvh,
-		spp:               300,
+		spp:               10000,
 		camera:            camera,
 		closest:           DefaultClosestHitShader,
 		miss:              DefaultMissShader,

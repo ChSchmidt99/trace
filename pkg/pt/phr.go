@@ -135,6 +135,44 @@ func (p *phr) areaThreshold(treeDepth int) float64 {
 	return p.s / math.Pow(2, p.alpha*float64(treeDepth)+p.delta)
 }
 
+func (p *phr) findInitialCutParallel(auxilary BVH, threadCount int) *phrCut {
+	queue := make(chan *bvhNode, 1024)
+	cut := phrCut{
+		bounding: auxilary.root.bounding,
+	}
+	m := sync.Mutex{}
+	wg := sync.WaitGroup{}
+	for i := 0; i < threadCount; i++ {
+		go func() {
+			for node := range queue {
+				if node.isLeaf {
+					m.Lock()
+					cut.nodes = append(cut.nodes, node)
+					m.Unlock()
+					wg.Done()
+				} else {
+					if node.bounding.surface() > p.areaThreshold(0) {
+						wg.Add(len(node.children) - 1)
+						for _, child := range node.children {
+							queue <- child
+						}
+						continue
+					}
+					m.Lock()
+					cut.nodes = append(cut.nodes, node)
+					m.Unlock()
+					wg.Done()
+				}
+			}
+		}()
+	}
+	queue <- auxilary.root
+	wg.Add(1)
+	wg.Wait()
+	close(queue)
+	return &cut
+}
+
 func (p *phr) findInitialCut(lbvh BVH) *phrCut {
 	// TODO: Paralellize?
 	queue := queue{}
@@ -296,9 +334,11 @@ func minCost(sortedNodes []*bvhNode) (min float64, splitIndex int) {
 }
 
 func sahCost(leftCut []*bvhNode, rightCut []*bvhNode) float64 {
-	leftSurface := enclosingSubtrees(leftCut).surface()
+	leftEnclosing := enclosingSubtrees(leftCut)
+	leftSurface := leftEnclosing.surface()
 	leftNodeCount := nodeCount(leftCut)
-	rightSurface := enclosingSubtrees(rightCut).surface()
+	rightEnclosing := enclosingSubtrees(rightCut)
+	rightSurface := rightEnclosing.surface()
 	rightNodeCount := nodeCount(rightCut)
 	return leftSurface*float64(leftNodeCount) + rightSurface*float64(rightNodeCount)
 }
@@ -312,7 +352,6 @@ func nodeCount(subtrees []*bvhNode) int {
 	return sum
 }
 
-// TODO: There is probably a more efficient way using channels
 type queue struct {
 	length int
 	first  *queueEntry
