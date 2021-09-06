@@ -11,20 +11,37 @@ import (
 type ClosestHitShader func(*Renderer, context, ray, *hit) Color
 
 func DefaultClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color {
-	if c.depth > renderer.maxDepth {
+	if c.depth > renderer.MaxDepth {
 		return NewColor(0, 0, 0)
 	}
 	c.depth++
 	light := h.material.emittedLight()
 	// If material scatters, compute intersections with scattered ray and then call itself recursively
 	if b, result := h.material.scatter(r, h, c.rand); b {
-		if renderer.bvh.intersected(result.scattered, 0.0001, math.Inf(1), h) {
-			return light.Add(renderer.closest(renderer, c, result.scattered, h).Blend(result.attenuation))
+		if renderer.Bvh.intersected(result.scattered, 0.0001, math.Inf(1), h) {
+			return light.Add(renderer.Closest(renderer, c, result.scattered, h).Blend(result.attenuation))
 		} else {
-			return light.Add(renderer.miss(renderer, c, result.scattered).Blend(result.attenuation))
+			return light.Add(renderer.Miss(renderer, c, result.scattered).Blend(result.attenuation))
 		}
 	} else {
 		return light
+	}
+}
+
+func UnlitClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color {
+	if c.depth > renderer.MaxDepth {
+		return NewColor(0, 0, 0)
+	}
+	c.depth++
+	// If material scatters, compute intersections with scattered ray and then call itself recursively
+	if b, result := h.material.scatter(r, h, c.rand); b {
+		if renderer.Bvh.intersected(result.scattered, 0.0001, math.Inf(1), h) {
+			return renderer.Closest(renderer, c, result.scattered, h).Blend(result.attenuation)
+		} else {
+			return renderer.Miss(renderer, c, result.scattered).Blend(result.attenuation)
+		}
+	} else {
+		return result.attenuation
 	}
 }
 
@@ -32,6 +49,18 @@ type MissShader func(*Renderer, context, ray) Color
 
 func DefaultMissShader(renderer *Renderer, c context, r ray) Color {
 	return NewColor(0, 0, 0)
+}
+
+func WhiteMissShader(renderer *Renderer, c context, r ray) Color {
+	return NewColor(1, 1, 1)
+}
+
+func SkyMissShader(renderer *Renderer, c context, r ray) Color {
+	unit := r.direction.Unit()
+	t := 0.5 * (unit.Y + 1)
+	white := NewColor(0.8, 0.8, 0.8)
+	blue := NewColor(0.25, 0.35, 0.5)
+	return white.Scale(1.0 - t).Add(blue.Scale(t))
 }
 
 type IntersectionCountShader func(count int) Color
@@ -46,13 +75,13 @@ func DefaultIntersectionCountShader(count int) Color {
 }
 
 type Renderer struct {
-	numCPU   int
-	maxDepth int
-	spp      int
-	bvh      BVH
-	camera   *Camera
-	closest  ClosestHitShader
-	miss     MissShader
+	NumCPU   int
+	MaxDepth int
+	Spp      int
+	Bvh      BVH
+	Camera   *Camera
+	Closest  ClosestHitShader
+	Miss     MissShader
 
 	// TODO: Remove IntersectionCountShader and make different Renderer?
 	intersectionCount IntersectionCountShader
@@ -60,13 +89,26 @@ type Renderer struct {
 
 func NewDefaultRenderer(bvh BVH, camera *Camera) *Renderer {
 	return &Renderer{
-		numCPU:            runtime.GOMAXPROCS(0),
-		maxDepth:          2,
-		bvh:               bvh,
-		spp:               10000,
-		camera:            camera,
-		closest:           DefaultClosestHitShader,
-		miss:              DefaultMissShader,
+		NumCPU:            runtime.GOMAXPROCS(0),
+		MaxDepth:          2,
+		Bvh:               bvh,
+		Spp:               300,
+		Camera:            camera,
+		Closest:           DefaultClosestHitShader,
+		Miss:              DefaultMissShader,
+		intersectionCount: DefaultIntersectionCountShader,
+	}
+}
+
+func NewNoLightRenderer(bvh BVH, camera *Camera) *Renderer {
+	return &Renderer{
+		NumCPU:            runtime.GOMAXPROCS(0),
+		MaxDepth:          2,
+		Bvh:               bvh,
+		Spp:               300,
+		Camera:            camera,
+		Closest:           UnlitClosestHitShader,
+		Miss:              WhiteMissShader,
 		intersectionCount: DefaultIntersectionCountShader,
 	}
 }
@@ -79,21 +121,21 @@ type context struct {
 func (r *Renderer) IntersectionHeatMapToBuffer(buff Buffer) {
 	jobs := make(chan int, buff.h())
 	wg := sync.WaitGroup{}
-	wg.Add(r.numCPU)
+	wg.Add(r.NumCPU)
 	width := buff.w()
 	height := buff.h()
-	for i := 0; i < r.numCPU; i++ {
+	for i := 0; i < r.NumCPU; i++ {
 		go func(c context, w, h int) {
 			ray := ray{
 				// ATTENTION! When camera is moved, this origin needs to be changed too!
-				origin: r.camera.orientation.origin,
+				origin: r.Camera.orientation.origin,
 			}
 			for y := range jobs {
 				for x := 0; x < w; x++ {
 					u := (float64(x) + c.rand.Float64()) / float64(w-1)
 					v := (float64(y) + c.rand.Float64()) / float64(h-1)
-					r.camera.castRayReuse(u, v, &ray)
-					count := r.bvh.intersectionTests(ray, 0.001, math.Inf(1))
+					r.Camera.castRayReuse(u, v, &ray)
+					count := r.Bvh.intersectionTests(ray, 0.001, math.Inf(1))
 					buff.addSample(x, y, r.intersectionCount(count))
 				}
 			}
@@ -103,7 +145,7 @@ func (r *Renderer) IntersectionHeatMapToBuffer(buff Buffer) {
 		}, width, height)
 	}
 	// TODO: Check if doing spp per pixel instead of per image is better
-	for i := 0; i < r.spp; i++ {
+	for i := 0; i < r.Spp; i++ {
 		for y := 0; y < height; y++ {
 			jobs <- y
 		}
@@ -115,25 +157,25 @@ func (r *Renderer) IntersectionHeatMapToBuffer(buff Buffer) {
 func (r *Renderer) RenderToBuffer(buff Buffer) {
 	jobs := make(chan int, buff.h())
 	wg := sync.WaitGroup{}
-	wg.Add(r.numCPU)
+	wg.Add(r.NumCPU)
 	width := buff.w()
 	height := buff.h()
-	for i := 0; i < r.numCPU; i++ {
+	for i := 0; i < r.NumCPU; i++ {
 		go func(c context, w, h int) {
 			ray := ray{
 				// ATTENTION! When camera is moved, this origin needs to be changed too!
-				origin: r.camera.orientation.origin,
+				origin: r.Camera.orientation.origin,
 			}
 			hit := hit{}
 			for y := range jobs {
 				for x := 0; x < w; x++ {
 					u := (float64(x) + c.rand.Float64()) / float64(w-1)
 					v := (float64(y) + c.rand.Float64()) / float64(h-1)
-					r.camera.castRayReuse(u, v, &ray)
-					if r.bvh.intersected(ray, 0.001, math.Inf(1), &hit) {
-						buff.addSample(x, y, r.closest(r, c, ray, &hit))
+					r.Camera.castRayReuse(u, v, &ray)
+					if r.Bvh.intersected(ray, 0.001, math.Inf(1), &hit) {
+						buff.addSample(x, y, r.Closest(r, c, ray, &hit))
 					} else {
-						buff.addSample(x, y, r.miss(r, c, ray))
+						buff.addSample(x, y, r.Miss(r, c, ray))
 					}
 				}
 			}
@@ -143,7 +185,7 @@ func (r *Renderer) RenderToBuffer(buff Buffer) {
 		}, width, height)
 	}
 	// TODO: Check if doing spp per pixel instead of per image is better
-	for i := 0; i < r.spp; i++ {
+	for i := 0; i < r.Spp; i++ {
 		for y := 0; y < height; y++ {
 			// TODO: Check if not using worker pattern and instead rendering calculated lines is faster
 			jobs <- y

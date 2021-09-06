@@ -14,12 +14,12 @@ func DefaultPHR(primitives []tracable) BVH {
 
 // alpha: How quickly cut size will shrink
 // delta: Size of initial cut for d = 0
-func PHR(primitives []tracable, enclosing aabb, alpha float64, delta float64, branchingFactor int, threadCount int) BVH {
+func PHR(primitives []tracable, enclosing aabb, alpha float64, delta int, branchingFactor int, threadCount int) BVH {
 	auxilaryBVH := LBVH(primitives, enclosing, threadCount)
 	return buildFromAuxilary(primitives, auxilaryBVH, enclosing, alpha, delta, branchingFactor, threadCount)
 }
 
-func buildFromAuxilary(primitives []tracable, auxilaryBVH BVH, enclosing aabb, alpha float64, delta float64, branchingFactor int, threadCount int) BVH {
+func buildFromAuxilary(primitives []tracable, auxilaryBVH BVH, enclosing aabb, alpha float64, delta int, branchingFactor int, threadCount int) BVH {
 
 	p := phr{
 		s:               enclosing.surface(),
@@ -74,7 +74,8 @@ type phrCut struct {
 
 type phr struct {
 	s               float64
-	alpha, delta    float64
+	alpha           float64
+	delta           int
 	branchingFactor int
 	jobs            chan *phrJob
 	primitives      []tracable
@@ -132,7 +133,7 @@ func (p *phr) queueJob(job *phrJob, wg *sync.WaitGroup) {
 }
 
 func (p *phr) areaThreshold(treeDepth int) float64 {
-	return p.s / math.Pow(2, p.alpha*float64(treeDepth)+p.delta)
+	return p.s / math.Pow(2, p.alpha*float64(treeDepth)+float64(p.delta))
 }
 
 func (p *phr) findInitialCutParallel(auxilary BVH, threadCount int) *phrCut {

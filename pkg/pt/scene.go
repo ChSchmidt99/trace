@@ -1,5 +1,7 @@
 package pt
 
+import "runtime"
+
 type Scene struct {
 	root *SceneNode
 }
@@ -16,8 +18,17 @@ func (s *Scene) Add(node *SceneNode) {
 
 func (s *Scene) Compile() BVH {
 	prims := s.root.collectTracables(IdentityMatrix())
-	//return DefaultLBVH(prims)
 	return DefaultPHR(prims)
+}
+
+func (s *Scene) CompileLBVH() BVH {
+	prims := s.root.collectTracables(IdentityMatrix())
+	return DefaultLBVH(prims)
+}
+
+func (s *Scene) CompilePHR(alpha float64, delta, branchingFactor int) BVH {
+	prims := s.root.collectTracables(IdentityMatrix())
+	return PHR(prims, enclosing(prims), alpha, delta, branchingFactor, runtime.GOMAXPROCS(0))
 }
 
 type SceneNode struct {

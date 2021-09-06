@@ -31,6 +31,10 @@ func (c Color) Div(n float64) Color {
 	return Color{c.X / n, c.Y / n, c.Z / n}
 }
 
+func (c Color) Scale(n float64) Color {
+	return Color{c.X * n, c.Y * n, c.Z * n}
+}
+
 type Vector3 struct {
 	X float64
 	Y float64
