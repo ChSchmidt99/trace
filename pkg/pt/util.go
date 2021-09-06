@@ -8,7 +8,7 @@ import (
 const APPROX_THRESH = 1e-7
 
 func ApproxZero(num float64) bool {
-	return num <= APPROX_THRESH
+	return math.Abs(num) <= APPROX_THRESH
 }
 
 // Deprecated, use RandomUnitVector instead

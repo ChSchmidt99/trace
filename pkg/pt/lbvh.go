@@ -139,7 +139,6 @@ func (queue *lbvhWorkerQueue) add(job *lbvhJob) {
 func (job *lbvhJob) process(queue *lbvhWorkerQueue) {
 	if isLeaf(job.pairs) {
 		indeces := make([]int, len(job.pairs))
-		// TODO: Better way to sync?
 		queue.wg.Add(1)
 		for i, pair := range job.pairs {
 			indeces[i] = pair.primIndex

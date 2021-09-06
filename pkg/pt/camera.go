@@ -59,9 +59,8 @@ func (c *Camera) castRayReuse(s, t float64, ray *ray) {
 }
 
 type ray struct {
-	origin    Vector3
-	direction Vector3
-	//unitDir        Vector3 // TODO: unit dir used?
+	origin         Vector3
+	direction      Vector3
 	dirNormSquared float64
 
 	invDirection Vector3
@@ -92,7 +91,6 @@ func (r *ray) reuse(origin Vector3, direction Vector3) {
 	r.origin = origin
 	r.direction = direction
 	r.invDirection = invDirection
-	//r.unitDir = direction.Unit()
 	r.dirNormSquared = dirNormSq
 	r.sign = sign
 }
@@ -115,7 +113,6 @@ func (r *ray) reuseSameOrigin(direction Vector3) {
 	dirNormSq := direction.LengthSquared()
 	r.direction = direction
 	r.invDirection = invDirection
-	//r.unitDir = direction.Unit()
 	r.dirNormSquared = dirNormSq
 	r.sign = sign
 }
