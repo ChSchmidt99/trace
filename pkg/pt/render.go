@@ -17,11 +17,11 @@ func DefaultClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color
 	c.depth++
 	light := h.material.emittedLight()
 	// If material scatters, compute intersections with scattered ray and then call itself recursively
-	if b, result := h.material.scatter(r, h, c.rand); b {
-		if renderer.Bvh.intersected(result.scattered, 0.0001, math.Inf(1), h) {
-			return light.Add(renderer.Closest(renderer, c, result.scattered, h).Blend(result.attenuation))
+	if b, attenuation := h.material.scatter(&r, h, c.rand); b {
+		if renderer.Bvh.intersected(r, 0.0001, math.Inf(1), h) {
+			return light.Add(renderer.Closest(renderer, c, r, h).Blend(attenuation))
 		} else {
-			return light.Add(renderer.Miss(renderer, c, result.scattered).Blend(result.attenuation))
+			return light.Add(renderer.Miss(renderer, c, r).Blend(attenuation))
 		}
 	} else {
 		return light
@@ -34,14 +34,14 @@ func UnlitClosestHitShader(renderer *Renderer, c context, r ray, h *hit) Color {
 	}
 	c.depth++
 	// If material scatters, compute intersections with scattered ray and then call itself recursively
-	if b, result := h.material.scatter(r, h, c.rand); b {
-		if renderer.Bvh.intersected(result.scattered, 0.0001, math.Inf(1), h) {
-			return renderer.Closest(renderer, c, result.scattered, h).Blend(result.attenuation)
+	if b, attenuation := h.material.scatter(&r, h, c.rand); b {
+		if renderer.Bvh.intersected(r, 0.0001, math.Inf(1), h) {
+			return renderer.Closest(renderer, c, r, h).Blend(attenuation)
 		} else {
-			return renderer.Miss(renderer, c, result.scattered).Blend(result.attenuation)
+			return renderer.Miss(renderer, c, r).Blend(attenuation)
 		}
 	} else {
-		return result.attenuation
+		return attenuation
 	}
 }
 

@@ -5,14 +5,8 @@ import (
 	"math/rand"
 )
 
-type scatterResult struct {
-	scattered   ray
-	attenuation Color
-}
-
 type Material interface {
-	// TODO: use ray pointer to reuse?
-	scatter(ray, *hit, *rand.Rand) (bool, scatterResult)
+	scatter(*ray, *hit, *rand.Rand) (bool, Color)
 	emittedLight() Color
 }
 
@@ -20,8 +14,8 @@ type Light struct {
 	Color Color
 }
 
-func (Light) scatter(ray, *hit, *rand.Rand) (bool, scatterResult) {
-	return false, scatterResult{}
+func (Light) scatter(*ray, *hit, *rand.Rand) (bool, Color) {
+	return false, Color{}
 }
 
 func (l Light) emittedLight() Color {
@@ -32,7 +26,7 @@ type Diffuse struct {
 	Albedo Color
 }
 
-func (d Diffuse) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
+func (d Diffuse) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, Color) {
 	scatterDirection := intersec.normal.Add(RandomUnitVector(r))
 
 	if scatterDirection.ApproxZero() {
@@ -40,10 +34,7 @@ func (d Diffuse) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterRes
 	}
 
 	ray.reuse(intersec.point, scatterDirection)
-	return true, scatterResult{
-		scattered:   ray,
-		attenuation: d.Albedo,
-	}
+	return true, d.Albedo
 }
 
 func (Diffuse) emittedLight() Color {
@@ -55,13 +46,10 @@ type Reflective struct {
 	Diffusion float64 // diffusion in range [0,1]
 }
 
-func (d Reflective) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
+func (d Reflective) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, Color) {
 	reflected := reflect(ray.direction.Unit(), intersec.normal)
 	ray.reuse(intersec.point, reflected.Add(RandomUnitVector(r).Mul(d.Diffusion)))
-	return reflected.Dot(intersec.normal) > 0, scatterResult{
-		scattered:   ray,
-		attenuation: d.Albedo,
-	}
+	return reflected.Dot(intersec.normal) > 0, d.Albedo
 }
 
 func (Reflective) emittedLight() Color {
@@ -73,7 +61,7 @@ type Refractive struct {
 	Ratio  float64
 }
 
-func (d Refractive) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatterResult) {
+func (d Refractive) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, Color) {
 	defractionRatio := d.Ratio
 	if intersec.frontFace {
 		defractionRatio = 1 / d.Ratio
@@ -92,10 +80,7 @@ func (d Refractive) scatter(ray ray, intersec *hit, r *rand.Rand) (bool, scatter
 		direction = refract(unitDir, intersec.normal, defractionRatio)
 	}
 	ray.reuse(intersec.point, direction)
-	return true, scatterResult{
-		scattered:   ray,
-		attenuation: d.Albedo,
-	}
+	return true, d.Albedo
 }
 
 func (Refractive) emittedLight() Color {
