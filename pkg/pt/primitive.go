@@ -146,7 +146,7 @@ func (tri *Triangle) normal(u, v float64) Vector3 {
 }
 
 func (tri *Triangle) transformed(t Matrix4) primitive {
-	// TODO: Cache or precompute?
+
 	tinv := t.Transpose().Inverse()
 
 	var vertecies [3]vertex

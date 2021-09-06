@@ -92,7 +92,6 @@ func (bvh *BVH) collectLeaves() []*bvhNode {
 }
 
 // TODO: Test interface bvh and compare performance
-// TODO: Test performance of array instead of node pointers
 type bvhNode struct {
 	parent       *bvhNode
 	prims        []int
@@ -178,7 +177,6 @@ func (node *bvhNode) updateAABB(primitives []tracable) {
 	node.parent.m.Unlock()
 }
 
-// TODO: Reuse stack nodes?
 type bvhStack struct {
 	top *bvhStackNode
 }
