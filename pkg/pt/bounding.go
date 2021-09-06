@@ -1,14 +1,11 @@
 package pt
 
-// TODO: Compare to pointer aabb
 type aabb struct {
 	bounds     [2]Vector3 // bounds[0] = min, bounds[1] = max
 	width      float64
 	height     float64
 	depth      float64
 	barycenter Vector3
-
-	surf float64
 }
 
 func newAABB(min, max Vector3) aabb {
@@ -20,88 +17,47 @@ func newAABB(min, max Vector3) aabb {
 }
 
 // TODO: Hide Enclosing?
+// TODO: Reuse AABB with out ptr
 func Enclosing(primitives []tracable) aabb {
 	enclosing := primitives[0].bounding()
 	for i := 1; i < len(primitives); i++ {
 		enclosing = enclosing.add(primitives[i].bounding())
 	}
 	return enclosing
-	/*
-		enclosing := primitives[0].bounding()
-		for i := 1; i < len(primitives); i++ {
-			enclosing.addPtr(primitives[i].bounding())
-		}
-		return enclosing
-	*/
 }
 
 func enclosingSlice(indeces []int, primitives []tracable) aabb {
-
 	enclosing := primitives[indeces[0]].bounding()
 	for i := 1; i < len(indeces); i++ {
 		prim := primitives[indeces[i]]
 		enclosing = enclosing.add(prim.bounding())
 	}
 	return enclosing
-	/*
-		enclosing := primitives[indeces[0]].bounding()
-		for i := 1; i < len(indeces); i++ {
-			prim := primitives[indeces[i]]
-			enclosing.addPtr(prim.bounding())
-		}
-		return enclosing
-	*/
 }
 
 func enclosingSubtrees(nodes []*bvhNode) aabb {
-
 	enclosing := nodes[0].bounding
 	for i := 1; i < len(nodes); i++ {
 		enclosing = enclosing.add(nodes[i].bounding)
 	}
 	return enclosing
-	/*
-		enclosing := nodes[0].bounding.copy()
-		for i := 1; i < len(nodes); i++ {
-			enclosing.addPtr(nodes[i].bounding)
-		}
-		return enclosing
-	*/
 }
 
-func (bounding *aabb) update() {
-	min := bounding.bounds[0]
-	max := bounding.bounds[1]
-	bounding.barycenter = min.Add(max).Mul(1.0 / 2.0)
-	bounding.width = max.X - min.X
-	bounding.height = max.Y - min.Y
-	bounding.depth = max.Z - min.Z
+func (a *aabb) update() {
+	min := a.bounds[0]
+	max := a.bounds[1]
+	a.barycenter = min.Add(max).Mul(1.0 / 2.0)
+	a.width = max.X - min.X
+	a.height = max.Y - min.Y
+	a.depth = max.Z - min.Z
 }
 
-func (a aabb) surface() float64 {
-	// TODO: Cache, if pointer aabb is used
+func (a *aabb) surface() float64 {
 	return 2*a.width*a.height + 2*a.width*a.depth + 2*a.height*a.depth
 }
 
 func (a aabb) add(b aabb) aabb {
 	return newAABB(MinVec(a.bounds[0], b.bounds[0]), MaxVec(a.bounds[1], b.bounds[1]))
-}
-
-func (a *aabb) addPtr(b aabb) {
-	a.bounds = [2]Vector3{MinVec(a.bounds[0], b.bounds[0]), MaxVec(a.bounds[1], b.bounds[1])}
-	a.update()
-}
-
-func (a *aabb) copy() aabb {
-	//return *a
-	return aabb{
-		bounds:     a.bounds,
-		width:      a.width,
-		height:     a.height,
-		depth:      a.depth,
-		barycenter: a.barycenter,
-		surf:       a.surf,
-	}
 }
 
 func (aabb aabb) intersected(ray ray, tMin, tMax float64) bool {

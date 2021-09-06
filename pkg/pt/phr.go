@@ -223,7 +223,6 @@ func (p *phr) splitPHRcut(cut *phrCut) (left *phrCut, right *phrCut) {
 		return &phrCut{left, letfBounding}, &phrCut{right, rightBounding}
 	}
 	if minX < minY && minX < minZ {
-		// TODO: Is it more efficient to sort twice, or copy and store sorted slice?
 		sort.SliceStable(cut.nodes, func(i, j int) bool {
 			return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
 		})
@@ -233,7 +232,6 @@ func (p *phr) splitPHRcut(cut *phrCut) (left *phrCut, right *phrCut) {
 		rightBounding := enclosingSubtrees(right)
 		return &phrCut{left, letfBounding}, &phrCut{right, rightBounding}
 	} else {
-		// TODO: Is it more efficient to sort twice, or copy and store sorted slice? (Same as above)
 		sort.SliceStable(cut.nodes, func(i, j int) bool {
 			return cut.nodes[i].bounding.barycenter.Y < cut.nodes[j].bounding.barycenter.Y
 		})
@@ -343,7 +341,7 @@ func sahCost(leftCut []*bvhNode, rightCut []*bvhNode) float64 {
 	return leftSurface*float64(leftNodeCount) + rightSurface*float64(rightNodeCount)
 }
 
-// TODO: Make size better available?
+// TODO: Make size available better?
 func nodeCount(subtrees []*bvhNode) int {
 	sum := 0
 	for _, node := range subtrees {
