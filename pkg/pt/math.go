@@ -131,43 +131,29 @@ func (p Vector4) Transformed(m Matrix4) Vector4 {
 	return m.Multiply(p)
 }
 
-// 4x4 Matrix [y][x], [row][column]
-// TODO: Try and compare [16]float64 Matrix
-type Matrix4 struct {
-	values [4][4]float64
-}
+// 4x4 Matrix
+type Matrix4 [16]float64
 
 func IdentityMatrix() Matrix4 {
 	return Matrix4{
-		[4][4]float64{
-			{1, 0, 0, 0},
-			{0, 1, 0, 0},
-			{0, 0, 1, 0},
-			{0, 0, 0, 1},
-		},
+		1, 0, 0, 0,
+		0, 1, 0, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1,
 	}
 }
 
 func (m Matrix4) Multiply(v Vector4) Vector4 {
-	result := make([]float64, 4)
-	for i, row := range m.values {
-		sum := row[0] * v.x
-		sum += row[1] * v.y
-		sum += row[2] * v.z
-		sum += row[3] * v.w
-		result[i] = sum
+	return Vector4{
+		x: m[0]*v.x + m[1]*v.x + m[2]*v.x + m[3]*v.x,
+		y: m[4]*v.y + m[5]*v.y + m[6]*v.y + m[7]*v.y,
+		z: m[8]*v.z + m[9]*v.z + m[10]*v.z + m[11]*v.z,
+		w: m[12]*v.w + m[13]*v.w + m[14]*v.w + m[15]*v.w,
 	}
-	return Vector4{x: result[0], y: result[1], z: result[2], w: result[3]}
 }
 
-func (m1 Matrix4) Inverse() Matrix4 {
+func (m Matrix4) Inverse() Matrix4 {
 	var inv [16]float64
-	m := [16]float64{
-		m1.values[0][0], m1.values[0][1], m1.values[0][2], m1.values[0][3],
-		m1.values[1][0], m1.values[1][1], m1.values[1][2], m1.values[1][3],
-		m1.values[2][0], m1.values[2][1], m1.values[2][2], m1.values[2][3],
-		m1.values[3][0], m1.values[3][1], m1.values[3][2], m1.values[3][3],
-	}
 
 	inv[0] = m[5]*m[10]*m[15] -
 		m[5]*m[11]*m[14] -
@@ -283,62 +269,45 @@ func (m1 Matrix4) Inverse() Matrix4 {
 
 	det := m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12]
 
-	if det == 0 {
-		panic("Error finding inverse")
-	}
-
 	det = 1.0 / det
 	return Matrix4{
-		values: [4][4]float64{
-			{inv[0] * det, inv[1] * det, inv[2] * det, inv[3] * det},
-			{inv[4] * det, inv[5] * det, inv[6] * det, inv[7] * det},
-			{inv[8] * det, inv[9] * det, inv[10] * det, inv[11] * det},
-			{inv[12] * det, inv[13] * det, inv[14] * det, inv[15] * det},
-		},
+		inv[0] * det, inv[1] * det, inv[2] * det, inv[3] * det,
+		inv[4] * det, inv[5] * det, inv[6] * det, inv[7] * det,
+		inv[8] * det, inv[9] * det, inv[10] * det, inv[11] * det,
+		inv[12] * det, inv[13] * det, inv[14] * det, inv[15] * det,
 	}
 }
 
 func (m Matrix4) Transpose() Matrix4 {
 	return Matrix4{
-		[4][4]float64{
-			{m.values[0][0], m.values[1][0], m.values[2][0], m.values[3][0]},
-			{m.values[0][1], m.values[1][1], m.values[2][1], m.values[3][1]},
-			{m.values[0][2], m.values[1][2], m.values[2][2], m.values[3][2]},
-			{m.values[0][3], m.values[1][3], m.values[2][3], m.values[3][3]},
-		},
+		m[0], m[4], m[8], m[12],
+		m[1], m[5], m[9], m[13],
+		m[2], m[6], m[10], m[14],
+		m[3], m[7], m[11], m[15],
 	}
 }
 
-func (m1 Matrix4) MultiplyMatrix(m2 Matrix4) Matrix4 {
-	a := m1.values
-	b := m2.values
+func (a Matrix4) MultiplyMatrix(b Matrix4) Matrix4 {
 	return Matrix4{
-		[4][4]float64{
-			{
-				a[0][0]*b[0][0] + a[0][1]*b[1][0] + a[0][2]*b[2][0] + a[0][3]*b[3][0],
-				a[0][0]*b[0][1] + a[0][1]*b[1][1] + a[0][2]*b[2][1] + a[0][3]*b[3][1],
-				a[0][0]*b[0][2] + a[0][1]*b[1][2] + a[0][2]*b[2][2] + a[0][3]*b[3][2],
-				a[0][0]*b[0][3] + a[0][1]*b[1][3] + a[0][2]*b[2][3] + a[0][3]*b[3][3],
-			},
-			{
-				a[1][0]*b[0][0] + a[1][1]*b[1][0] + a[1][2]*b[2][0] + a[1][3]*b[3][0],
-				a[1][0]*b[0][1] + a[1][1]*b[1][1] + a[1][2]*b[2][1] + a[1][3]*b[3][1],
-				a[1][0]*b[0][2] + a[1][1]*b[1][2] + a[1][2]*b[2][2] + a[1][3]*b[3][2],
-				a[1][0]*b[0][3] + a[1][1]*b[1][3] + a[1][2]*b[2][3] + a[1][3]*b[3][3],
-			},
-			{
-				a[2][0]*b[0][0] + a[2][1]*b[1][0] + a[2][2]*b[2][0] + a[2][3]*b[3][0],
-				a[2][0]*b[0][1] + a[2][1]*b[1][1] + a[2][2]*b[2][1] + a[2][3]*b[3][1],
-				a[2][0]*b[0][2] + a[2][1]*b[1][2] + a[2][2]*b[2][2] + a[2][3]*b[3][2],
-				a[2][0]*b[0][3] + a[2][1]*b[1][3] + a[2][2]*b[2][3] + a[2][3]*b[3][3],
-			},
-			{
-				a[3][0]*b[0][0] + a[3][1]*b[1][0] + a[3][2]*b[2][0] + a[3][3]*b[3][0],
-				a[3][0]*b[0][1] + a[3][1]*b[1][1] + a[3][2]*b[2][1] + a[3][3]*b[3][1],
-				a[3][0]*b[0][2] + a[3][1]*b[1][2] + a[3][2]*b[2][2] + a[3][3]*b[3][2],
-				a[3][0]*b[0][3] + a[3][1]*b[1][3] + a[3][2]*b[2][3] + a[3][3]*b[3][3],
-			},
-		},
+		a[0]*b[0] + a[1]*b[4] + a[2]*b[8] + a[3]*b[12],
+		a[0]*b[1] + a[1]*b[5] + a[2]*b[9] + a[3]*b[13],
+		a[0]*b[2] + a[1]*b[6] + a[2]*b[10] + a[3]*b[14],
+		a[0]*b[3] + a[1]*b[7] + a[2]*b[11] + a[3]*b[15],
+
+		a[4]*b[0] + a[5]*b[4] + a[6]*b[8] + a[7]*b[12],
+		a[4]*b[1] + a[5]*b[5] + a[6]*b[9] + a[7]*b[13],
+		a[4]*b[2] + a[5]*b[6] + a[6]*b[10] + a[7]*b[14],
+		a[4]*b[3] + a[5]*b[7] + a[6]*b[11] + a[7]*b[15],
+
+		a[8]*b[0] + a[9]*b[4] + a[10]*b[8] + a[11]*b[12],
+		a[8]*b[1] + a[9]*b[5] + a[10]*b[9] + a[11]*b[13],
+		a[8]*b[2] + a[9]*b[6] + a[10]*b[10] + a[11]*b[14],
+		a[8]*b[3] + a[9]*b[7] + a[10]*b[11] + a[11]*b[15],
+
+		a[12]*b[0] + a[13]*b[4] + a[14]*b[8] + a[15]*b[12],
+		a[12]*b[1] + a[13]*b[5] + a[14]*b[9] + a[15]*b[13],
+		a[12]*b[2] + a[13]*b[6] + a[14]*b[10] + a[15]*b[14],
+		a[12]*b[3] + a[13]*b[7] + a[14]*b[11] + a[15]*b[15],
 	}
 }
 
@@ -366,13 +335,10 @@ func (a Quanternion) ToRotationMatrix() Matrix4 {
 	y := a.v.Y
 	z := a.v.Z
 
-	vals := [4][4]float64{
-		{1 - 2*y*y - 2*z*z, 2*x*y - 2*z*w, 2*x*z + 2*y*w, 0},
-		{2*x*y + 2*z*w, 1 - 2*x*x - 2*z*z, 2*y*z - 2*x*w, 0},
-		{2*x*z - 2*y*w, 2*y*z + 2*x*w, 1 - 2*x*x - 2*y*y, 0},
-		{0, 0, 0, 1},
-	}
 	return Matrix4{
-		values: vals,
+		1 - 2*y*y - 2*z*z, 2*x*y - 2*z*w, 2*x*z + 2*y*w, 0,
+		2*x*y + 2*z*w, 1 - 2*x*x - 2*z*z, 2*y*z - 2*x*w, 0,
+		2*x*z - 2*y*w, 2*y*z + 2*x*w, 1 - 2*x*x - 2*y*y, 0,
+		0, 0, 0, 1,
 	}
 }
