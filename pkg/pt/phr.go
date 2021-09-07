@@ -46,7 +46,7 @@ func (p PhrBuilder) Build() BVH {
 
 func (p PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 
-	// Determin initial cut
+	// Determine initial cut
 	//cut := p.findInitialCut(auxilaryBVH)
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
 
@@ -280,33 +280,33 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 	return phrCut{left, letfBounding}, phrCut{right, rightBounding}
 }
 
-func minCost(sortedNodes []*bvhNode) (min float64, splitIndex int) {
+// Uses SAH to compute the best split index and corresponding cost
+func minCost(sortedNodes []*bvhNode) (cost float64, splitIndex int) {
 	minCost := math.Inf(1)
 	minIndex := 0
+	// Compute and track right costs by incrementally extending bounding box
+	SaRight := sortedNodes[len(sortedNodes)-1].bounding
+	rightCosts := make([]float64, len(sortedNodes))
+	nodeCount := 0
+	for i := len(sortedNodes) - 1; i > 0; i-- {
+		SaRight = SaRight.add(sortedNodes[i].bounding)
+		nodeCount += sortedNodes[i].subtreeSize()
+		rightCosts[i] = SaRight.surface() * float64(nodeCount)
+	}
+
+	// Incrementally extend left box and use tracked right costs to compute full SAH cost
+	nodeCount = sortedNodes[0].subtreeSize()
+	SaLeft := sortedNodes[0].bounding
 	for i := 1; i < len(sortedNodes); i++ {
-		cost := sahCost(sortedNodes[:i], sortedNodes[i:])
+		cost := rightCosts[i] + SaLeft.surface()*float64(nodeCount)
 		if cost < minCost {
 			minCost = cost
 			minIndex = i
 		}
+		SaLeft = SaLeft.add(sortedNodes[i].bounding)
+		nodeCount += sortedNodes[i].subtreeSize()
 	}
+
+	// TODO: Include cost of not splitting?
 	return minCost, minIndex
-}
-
-func sahCost(leftCut []*bvhNode, rightCut []*bvhNode) float64 {
-	leftEnclosing := enclosingSubtrees(leftCut)
-	leftSurface := leftEnclosing.surface()
-	leftNodeCount := nodeCount(leftCut)
-	rightEnclosing := enclosingSubtrees(rightCut)
-	rightSurface := rightEnclosing.surface()
-	rightNodeCount := nodeCount(rightCut)
-	return leftSurface*float64(leftNodeCount) + rightSurface*float64(rightNodeCount)
-}
-
-func nodeCount(subtrees []*bvhNode) int {
-	sum := 0
-	for _, node := range subtrees {
-		sum += node.subtreeSize()
-	}
-	return sum
 }

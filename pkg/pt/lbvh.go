@@ -22,7 +22,6 @@ func LBVH(prims []tracable, enclosing aabb, threads int) BVH {
 	return bvh
 }
 
-// TODO: Compare index to pointer approach
 type mortonPair struct {
 	primIndex  int
 	mortonCode uint64

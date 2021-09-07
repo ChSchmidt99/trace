@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed 
 - Fixed bug in enclosing functions
 - Parallelized PHR find initial Cut
-- caching subtree size
-- atomic counter for updateAABB
+- Caching subtree size
+- Atomic counter for updateAABB
+- Incrementally compute SAH
 
 ## [0.0.3] - 2021-08-12
 ### Added

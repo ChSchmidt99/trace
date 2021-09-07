@@ -17,7 +17,7 @@ func main() {
 	//scene, camera := demo.CornellBox(ASPECT_RATIO, FOV)
 	scene, camera := demo.Bunny(ASPECT_RATIO, FOV)
 
-	bvh := scene.CompileLBVH()
+	bvh := scene.Compile()
 	renderer := NewDefaultRenderer(bvh, camera)
 	renderer.Closest = UnlitClosestHitShader
 	renderer.Miss = SkyMissShader
