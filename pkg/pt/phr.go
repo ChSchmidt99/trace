@@ -104,14 +104,22 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	// Termination criteria: if only one node is left in the cut, collect its primitives and cobine into new leaf
-	if len(job.cut.nodes) <= 1 {
-		leaves := make([]*bvhNode, 0)
-		job.cut.nodes[0].collectLeaves(&leaves)
-		prims := make([]int, 0, len(leaves))
-		for _, leaf := range leaves {
-			prims = append(prims, leaf.prims...)
+	/*
+		if len(job.cut.nodes) <= 1 {
+			leaves := make([]*bvhNode, 0)
+			job.cut.nodes[0].collectLeaves(&leaves)
+			prims := make([]int, 0, len(leaves))
+			for _, leaf := range leaves {
+				prims = append(prims, leaf.prims...)
+			}
+			leaf := newLeaf(prims)
+			leaf.bounding = job.cut.bounding
+			job.parent.addChild(leaf, job.childIndex)
+			return
 		}
-		job.parent.addChild(newLeaf(prims), job.childIndex)
+	*/
+	if len(job.cut.nodes) <= 1 {
+		job.parent.addChild(job.cut.nodes[0], job.childIndex)
 		return
 	}
 
@@ -239,7 +247,6 @@ type phrCut struct {
 
 type SplitFunction func(phrCut) (phrCut, phrCut)
 
-// TODO: Implement Bucket SAH
 func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 	if len(cut.nodes) == 2 {
 		return phrCut{
@@ -266,7 +273,6 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 	// Keep the sorted slice with lower cost and override the other by sorting along z axis
 	// Finally, return the split with the lowest cost
 
-	// TODO: Implement spatial splits?
 	if xSAH.cost < ySAH.cost {
 		sort.SliceStable(sorted2, func(i, j int) bool {
 			return sorted2[i].bounding.barycenter.Z < sorted2[j].bounding.barycenter.Z
