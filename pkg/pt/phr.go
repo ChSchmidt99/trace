@@ -49,7 +49,6 @@ func (p PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	// Determine initial cut
 	//cut := p.findInitialCut(auxilaryBVH)
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
-
 	// Start workers
 	wg := sync.WaitGroup{}
 	p.jobs = make(chan *phrJob, p.threadCount)
@@ -104,14 +103,20 @@ func (p PhrBuilder) queueJob(job *phrJob, wg *sync.WaitGroup) {
 func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	// Termination criteria, if only one node is left, add it and return
+	// Termination criteria: if only one node is left in the cut, collect its primitives and cobine into new leaf
 	if len(job.cut.nodes) <= 1 {
-		job.parent.addChild(job.cut.nodes[0], job.childIndex)
+		leaves := make([]*bvhNode, 0)
+		job.cut.nodes[0].collectLeaves(&leaves)
+		prims := make([]int, 0, len(leaves))
+		for _, leaf := range leaves {
+			prims = append(prims, leaf.prims...)
+		}
+		job.parent.addChild(newLeaf(prims), job.childIndex)
 		return
 	}
 
-	cuts := make([]phrCut, 0, p.BranchingFactor)
-	cuts = append(cuts, job.cut)
+	cuts := make([]phrCut, 1, p.BranchingFactor)
+	cuts[0] = job.cut
 
 	// Keep splitting cut until enough nodes to branch the tree are found
 	for len(cuts) < p.BranchingFactor {
@@ -236,6 +241,15 @@ type SplitFunction func(phrCut) (phrCut, phrCut)
 
 // TODO: Implement Bucket SAH
 func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
+	if len(cut.nodes) == 2 {
+		return phrCut{
+				nodes:    cut.nodes[:1],
+				bounding: cut.nodes[0].bounding,
+			}, phrCut{
+				nodes:    cut.nodes[1:],
+				bounding: cut.nodes[1].bounding,
+			}
+	}
 
 	// Sort along x and y axis using two separate slices
 	sort.SliceStable(cut.nodes, func(i, j int) bool {
@@ -249,11 +263,9 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 
 	xSAH := minCost(cut.nodes)
 	ySAH := minCost(sorted2)
-
 	// Keep the sorted slice with lower cost and override the other by sorting along z axis
 	// Finally, return the split with the lowest cost
 
-	// TODO: Include cost of not splitting?
 	// TODO: Implement spatial splits?
 	if xSAH.cost < ySAH.cost {
 		sort.SliceStable(sorted2, func(i, j int) bool {

@@ -85,7 +85,7 @@ func (n *SceneNode) collectTracables(t Matrix4) []tracable {
 	t = n.transformation.MultiplyMatrix(t)
 	out := make([]tracable, 0)
 	if n.mesh != nil {
-		out = append(out, n.mesh.transformed(t)...)
+		out = append(out, n.mesh.Transformed(t)...)
 	}
 	for _, child := range n.children {
 		out = append(out, child.collectTracables(t)...)
@@ -110,7 +110,7 @@ func NewMesh(geometry Geometry, mat Material) *Mesh {
 	}
 }
 
-func (m Mesh) transformed(t Matrix4) []tracable {
+func (m Mesh) Transformed(t Matrix4) []tracable {
 	tracables := make([]tracable, len(m.geometry))
 	t = m.transformation.MultiplyMatrix(t)
 	for i, prim := range m.geometry {

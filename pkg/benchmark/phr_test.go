@@ -37,3 +37,15 @@ func BenchmarkPHRBuild(b *testing.B) {
 		builder.Build()
 	}
 }
+
+/*
+func BenchmarkPHRBuildHairball(b *testing.B) {
+	geometry := pt.ParseFromPath("../../assets/local/hairball.obj")
+	mesh := pt.NewMesh(geometry, nil)
+	builder := pt.NewPHRBuilder(mesh.Transformed(pt.IdentityMatrix()), ALPHA, DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		builder.Build()
+	}
+}
+*/
