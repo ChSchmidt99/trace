@@ -234,9 +234,10 @@ type phrCut struct {
 
 type SplitFunction func(phrCut) (phrCut, phrCut)
 
-// TODO: Rework Sweep SAH
 // TODO: Implement Bucket SAH
 func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
+
+	// Sort along x and y axis using two separate slices
 	sort.SliceStable(cut.nodes, func(i, j int) bool {
 		return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
 	})
@@ -245,53 +246,62 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 	sort.SliceStable(sorted2, func(i, j int) bool {
 		return sorted2[i].bounding.barycenter.Y < sorted2[j].bounding.barycenter.Y
 	})
-	minX, iX := minCost(cut.nodes)
-	minY, iY := minCost(sorted2)
 
-	var left []*bvhNode
-	var right []*bvhNode
-	if minX < minY {
+	xSAH := minCost(cut.nodes)
+	ySAH := minCost(sorted2)
+
+	// Keep the sorted slice with lower cost and override the other by sorting along z axis
+	// Finally, return the split with the lowest cost
+
+	// TODO: Include cost of not splitting?
+	// TODO: Implement spatial splits?
+	if xSAH.cost < ySAH.cost {
 		sort.SliceStable(sorted2, func(i, j int) bool {
 			return sorted2[i].bounding.barycenter.Z < sorted2[j].bounding.barycenter.Z
 		})
-		minZ, iZ := minCost(sorted2)
-		if minX < minZ {
-			left = cut.nodes[:iX]
-			right = cut.nodes[iX:]
+		zSAH := minCost(sorted2)
+		if xSAH.cost < zSAH.cost {
+			return xSAH.left, xSAH.right
 		} else {
-			left = sorted2[:iZ]
-			right = sorted2[iZ:]
+			return zSAH.left, zSAH.right
 		}
 	} else {
 		sort.SliceStable(cut.nodes, func(i, j int) bool {
 			return cut.nodes[i].bounding.barycenter.Z < cut.nodes[j].bounding.barycenter.Z
 		})
-		minZ, iZ := minCost(cut.nodes)
-		if minY < minZ {
-			left = sorted2[:iY]
-			right = sorted2[iY:]
+		zSAH := minCost(cut.nodes)
+		if ySAH.cost < zSAH.cost {
+			return ySAH.left, ySAH.right
 		} else {
-			left = cut.nodes[:iZ]
-			right = cut.nodes[iZ:]
+			return zSAH.left, zSAH.right
 		}
 	}
-	letfBounding := enclosingSubtrees(left)
-	rightBounding := enclosingSubtrees(right)
-	return phrCut{left, letfBounding}, phrCut{right, rightBounding}
 }
 
-// Uses SAH to compute the best split index and corresponding cost
-func minCost(sortedNodes []*bvhNode) (cost float64, splitIndex int) {
-	minCost := math.Inf(1)
-	minIndex := 0
+type sah struct {
+	left  phrCut
+	right phrCut
+	cost  float64
+}
+
+// Uses SAH to compute the best split
+func minCost(sortedNodes []*bvhNode) sah {
+	min := sah{
+		cost: math.Inf(1),
+	}
 	// Compute and track right costs by incrementally extending bounding box
 	SaRight := sortedNodes[len(sortedNodes)-1].bounding
 	rightCosts := make([]float64, len(sortedNodes))
+	rightCuts := make([]phrCut, len(sortedNodes))
 	nodeCount := 0
 	for i := len(sortedNodes) - 1; i > 0; i-- {
 		SaRight = SaRight.add(sortedNodes[i].bounding)
 		nodeCount += sortedNodes[i].subtreeSize()
 		rightCosts[i] = SaRight.surface() * float64(nodeCount)
+		rightCuts[i] = phrCut{
+			nodes:    sortedNodes[i:],
+			bounding: SaRight,
+		}
 	}
 
 	// Incrementally extend left box and use tracked right costs to compute full SAH cost
@@ -299,14 +309,16 @@ func minCost(sortedNodes []*bvhNode) (cost float64, splitIndex int) {
 	SaLeft := sortedNodes[0].bounding
 	for i := 1; i < len(sortedNodes); i++ {
 		cost := rightCosts[i] + SaLeft.surface()*float64(nodeCount)
-		if cost < minCost {
-			minCost = cost
-			minIndex = i
+		if cost < min.cost {
+			min.cost = cost
+			min.left = phrCut{
+				nodes:    sortedNodes[:i],
+				bounding: SaLeft,
+			}
+			min.right = rightCuts[i]
 		}
 		SaLeft = SaLeft.add(sortedNodes[i].bounding)
 		nodeCount += sortedNodes[i].subtreeSize()
 	}
-
-	// TODO: Include cost of not splitting?
-	return minCost, minIndex
+	return min
 }
