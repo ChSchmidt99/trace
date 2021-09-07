@@ -6,8 +6,9 @@ import (
 )
 
 type BVH struct {
-	root  *bvhNode
-	prims []tracable
+	root   *bvhNode
+	prims  []tracable
+	leaves []*bvhNode
 }
 
 // Number of intersection tests executed for given ray, including node bounding boxes and leaf primitives
@@ -64,9 +65,7 @@ func (bvh *BVH) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	}
 }
 
-// TODO: Rework bounding box update
 func (bvh *BVH) updateBounding(threads int) {
-	leaves := bvh.collectLeaves()
 	wg := sync.WaitGroup{}
 	wg.Add(threads)
 	jobs := make(chan *bvhNode)
@@ -78,18 +77,16 @@ func (bvh *BVH) updateBounding(threads int) {
 			}
 		}(jobs, bvh.prims)
 	}
-	for _, leaf := range leaves {
+	for _, leaf := range bvh.leaves {
 		jobs <- leaf
 	}
 	close(jobs)
 	wg.Wait()
 }
 
-// TODO: Can this be parallelized or replaced?
-func (bvh *BVH) collectLeaves() []*bvhNode {
-	acc := make([]*bvhNode, 0)
-	bvh.root.collectLeaves(&acc)
-	return acc
+func (bvh *BVH) storeLeaves() {
+	bvh.leaves = make([]*bvhNode, 0)
+	bvh.root.collectLeaves(&bvh.leaves)
 }
 
 type bvhNode struct {

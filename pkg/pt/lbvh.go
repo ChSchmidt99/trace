@@ -18,6 +18,7 @@ func LBVH(prims []tracable, enclosing aabb, threads int) BVH {
 	sortPairs(paris, threads)
 	bvh := constructLBVH(paris, MORTON_SIZE, threads)
 	bvh.prims = prims
+	bvh.storeLeaves()
 	bvh.updateBounding(threads)
 	return bvh
 }
@@ -67,7 +68,6 @@ func computeMorton(prim tracable, morton *Morton, enclosing aabb, mortonSize uin
 	yQuantized := uint32(deltaY / (enclosing.height / float64(mortonSize-1)))
 	zQuantized := uint32(deltaZ / (enclosing.depth / float64(mortonSize-1)))
 	vec := []uint32{xQuantized, yQuantized, zQuantized}
-	// Neglecting error for performance sake
 	encoded, _ := morton.Encode(vec)
 	return encoded
 }
