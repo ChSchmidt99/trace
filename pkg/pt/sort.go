@@ -15,16 +15,24 @@ type mergeJob struct {
 	out     []mortonPair
 }
 
-// Parallel Bucket sort
-func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, threads int) []mortonPair {
-	// Put pairs into buckets
+// Parallel bucket sort
+func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, threads int) {
+	bucketCollection, bucketFill := fillBuckets(pairs, numberOfBuckets, maxMorton, threads)
+	merge(pairs, bucketFill, bucketCollection, numberOfBuckets, threads)
+}
+
+// Inserts morton pairs into the specified number of buckets
+// Each thread uses a separate slice of buckets to avoid the need for synchronized access
+// Return:
+// buckets: [threads][numberOfBuckets]bucket => one slice of buckets for each thread
+// bucketFill: holds how many pairs have been inserted into the corresponding bucket
+func fillBuckets(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, threads int) (buckets [][]bucket, bucketFill []int32) {
 	batchSize := int(math.Ceil(float64(len(pairs)) / float64(threads)))
 	bucketCollection := make([][]bucket, 0, threads)
-
-	// Stores how many pairs are stored in the corresponding bucket
 	bucketEntries := make([]int32, numberOfBuckets)
-
 	wg := sync.WaitGroup{}
+
+	// Each thread inserts an equal amount of pairs into its seperate slice of buckets
 	for i := 0; i < threads; i++ {
 		start := i * batchSize
 		if start >= len(pairs) {
@@ -44,8 +52,13 @@ func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, 
 		}(pairs[start:end], i)
 	}
 	wg.Wait()
+	return bucketCollection, bucketEntries
+}
 
+func merge(out []mortonPair, bucketEntries []int32, bucketCollection [][]bucket, numberOfBuckets int, threads int) {
+	// Start workers, each worker inserts pairs into the given interval of the out slice and sorts it
 	jobs := make(chan mergeJob, threads)
+	wg := sync.WaitGroup{}
 	wg.Add(threads)
 	for i := 0; i < threads; i++ {
 		go func() {
@@ -55,12 +68,16 @@ func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, 
 			wg.Done()
 		}()
 	}
+
+	// Feed jobs to workers,
+	// Bucket fills are used to determine the corresponding interval in the output slice
+	// This method is used to avoid allocating a output slice as this would be quite expensive
 	start := 0
 	for i := 0; i < numberOfBuckets; i++ {
 		end := start + int(bucketEntries[i])
 		job := mergeJob{
 			index: i,
-			out:   pairs[start:end],
+			out:   out[start:end],
 		}
 		for _, buck := range bucketCollection {
 			job.buckets = append(job.buckets, buck[i])
@@ -70,7 +87,6 @@ func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, 
 	}
 	close(jobs)
 	wg.Wait()
-	return pairs
 }
 
 // Merges n buckets with the same bucket index

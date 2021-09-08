@@ -17,7 +17,7 @@ func DefaultLBVH(prims []tracable) BVH {
 func LBVH(prims []tracable, enclosing aabb, threads int) BVH {
 	pairs := assignMortonCodes(prims, enclosing, MORTON_SIZE, threads)
 	maxMorton := uint64(math.Pow(float64(MORTON_SIZE), 3))
-	pairs = sortMortonPairs(pairs, BUCKET_COUNT, maxMorton, threads)
+	sortMortonPairs(pairs, BUCKET_COUNT, maxMorton, threads)
 	bvh := constructLBVH(pairs, MORTON_SIZE, threads)
 	bvh.prims = prims
 	bvh.storeLeaves()

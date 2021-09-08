@@ -28,12 +28,11 @@ func BenchmarkSort(b *testing.B) {
 	*/
 	b.Run("Bucket Sort", func(b *testing.B) {
 		sample := generateTestSet(size, int(maxCode))
-		var r []mortonPair
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			r = sortMortonPairs(sample, 4096, maxCode, runtime.GOMAXPROCS(0))
+			sortMortonPairs(sample, 4096, maxCode, runtime.GOMAXPROCS(0))
 		}
-		result = r
+		result = sample
 	})
 }
 
@@ -42,10 +41,10 @@ func TestBucketSort(t *testing.T) {
 	maxCode := uint64(math.Pow(float64(MORTON_SIZE), 3))
 	//maxCode := 1024
 	sample := generateTestSet(size, int(maxCode))
-	out := sortMortonPairs(sample, 4096, uint64(maxCode), runtime.GOMAXPROCS(0))
-	for i := 1; i < len(out); i++ {
-		if out[i].mortonCode < out[i-1].mortonCode {
-			fmt.Printf("First: %v Second: %v\n", out[i-1], out[i])
+	sortMortonPairs(sample, 4096, uint64(maxCode), runtime.GOMAXPROCS(0))
+	for i := 1; i < len(sample); i++ {
+		if sample[i].mortonCode < sample[i-1].mortonCode {
+			fmt.Printf("First: %v Second: %v\n", sample[i-1], sample[i])
 			assert.Fail(t, "Not sorted properly")
 		}
 	}
