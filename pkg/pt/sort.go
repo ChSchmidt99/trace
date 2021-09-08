@@ -32,8 +32,6 @@ func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, 
 		go func(input []mortonPair, threadNumber int) {
 			for _, pair := range input {
 				index := (uint64(numberOfBuckets) * pair.mortonCode) / maxMorton
-				//index := (uint64(numberOfBuckets) * pair.mortonCode) / (maxMorton +1)
-				//index := pair.mortonCode / bucketSize
 				bucketCollection[threadNumber][index] = append(bucketCollection[threadNumber][index], pair)
 			}
 			wg.Done()
@@ -64,13 +62,15 @@ func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, 
 	close(jobs)
 	wg.Wait()
 
-	// TODO: Parallelize and insert into input slice
-	out := make([]mortonPair, 0, len(pairs))
+	// TODO: Parallelize
+	index := 0
 	for _, buck := range sorted {
-		out = append(out, buck...)
+		for _, pair := range buck {
+			pairs[index] = pair
+			index++
+		}
 	}
-
-	return out
+	return pairs
 }
 
 // Merges n buckets with the same bucket index
