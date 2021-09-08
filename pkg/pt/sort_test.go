@@ -1,6 +1,7 @@
 package pt
 
 import (
+	"fmt"
 	"math"
 	"math/rand"
 	"runtime"
@@ -37,11 +38,17 @@ func BenchmarkSort(b *testing.B) {
 }
 
 func TestBucketSort(t *testing.T) {
-	size := 10000000
-	maxCode := uint64(math.Pow(float64(MORTON_SIZE), 3)) - 1
+	size := 1000000
+	maxCode := uint64(math.Pow(float64(MORTON_SIZE), 3))
+	//maxCode := 1024
 	sample := generateTestSet(size, int(maxCode))
 	out := sortMortonPairs(sample, 4096, uint64(maxCode), runtime.GOMAXPROCS(0))
-	assert.Equal(t, len(out), size)
+	for i := 1; i < len(out); i++ {
+		if out[i].mortonCode < out[i-1].mortonCode {
+			fmt.Printf("First: %v Second: %v\n", out[i-1], out[i])
+			assert.Fail(t, "Not sorted properly")
+		}
+	}
 }
 
 /*
