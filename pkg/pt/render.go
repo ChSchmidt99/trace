@@ -83,6 +83,7 @@ type Renderer struct {
 	Closest  ClosestHitShader
 	Miss     MissShader
 
+	// TODO: Add verbose mode and incremental saving to image
 	// TODO: Remove IntersectionCountShader and make different Renderer?
 	intersectionCount IntersectionCountShader
 }

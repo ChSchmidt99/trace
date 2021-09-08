@@ -144,6 +144,7 @@ func (node *bvhNode) collectLeaves(acc *[]*bvhNode) {
 func (node *bvhNode) updateAABB(primitives []tracable) {
 	if node.isLeaf {
 		node.bounding = enclosingSlice(node.prims, primitives)
+		// Atomic counter. after all child bounding boxes have been computed the parents bounding box can be calculated
 		if atomic.AddUint32(&node.parent.childAABBset, 1)%uint32(len(node.parent.children)) == 0 {
 			node.parent.updateAABB(primitives)
 		}
