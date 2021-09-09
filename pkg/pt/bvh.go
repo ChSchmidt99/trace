@@ -71,12 +71,12 @@ func (bvh *BVH) updateBounding(threads int) {
 	wg.Add(threads)
 	jobs := make(chan *bvhNode)
 	for i := 0; i < threads; i++ {
-		go func(pipeline chan *bvhNode, prims []tracable) {
+		go func() {
 			defer wg.Done()
-			for leaf := range pipeline {
-				leaf.updateAABB(prims)
+			for leaf := range jobs {
+				leaf.updateAABB(bvh.prims)
 			}
-		}(jobs, bvh.prims)
+		}()
 	}
 	for _, leaf := range bvh.leaves {
 		jobs <- leaf
@@ -99,26 +99,20 @@ type bvhNode struct {
 	prims        []int
 	children     []*bvhNode
 	bounding     aabb
-	m            *sync.Mutex
-	childAABBset uint32
+	childAABBset uint32 // used as atomic counter when updating AABB
 	isLeaf       bool
 	size         int
 }
 
-func newBranch(children int) *bvhNode {
-	return &bvhNode{
-		children: make([]*bvhNode, children),
-		isLeaf:   false,
-		m:        &sync.Mutex{},
-	}
+func (node *bvhNode) initLeaf(prims []int) {
+	node.isLeaf = true
+	node.size = 1
+	node.prims = prims
 }
 
-func newLeaf(prims []int) *bvhNode {
-	return &bvhNode{
-		prims:  prims,
-		isLeaf: true,
-		size:   1,
-	}
+func (node *bvhNode) initBranch(children int) {
+	node.isLeaf = false
+	node.children = make([]*bvhNode, children)
 }
 
 func (node *bvhNode) addChild(child *bvhNode, index int) {

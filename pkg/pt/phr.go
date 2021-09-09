@@ -35,12 +35,12 @@ func NewPHRBuilder(primitives []tracable, alpha float64, delta int, branchingFac
 	}
 }
 
-func (p PhrBuilder) Build() BVH {
+func (p *PhrBuilder) Build() BVH {
 	auxilaryBVH := LBVH(p.primitives, enclosing(p.primitives), p.threadCount)
 	return p.BuildFromAuxilary(auxilaryBVH)
 }
 
-func (p PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
+func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	p.surface = auxilaryBVH.root.bounding.surface()
 	// Determine initial cut
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
@@ -56,17 +56,18 @@ func (p PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	}
 
 	// Temporary branch as a starting point, will be discared afterwards
-	temp := newBranch(1)
+	temp := &bvhNode{}
+	temp.initBranch(1)
 	temp.bounding = auxilaryBVH.root.bounding
 	wg.Add(1)
 
 	// Start initial job
-	p.queueJob(&phrJob{
+	p.jobs <- &phrJob{
 		depth:      1,
 		cut:        cut,
 		parent:     temp,
 		childIndex: 0,
-	}, &wg)
+	}
 
 	// Wait until tree is built
 	wg.Wait()
@@ -86,41 +87,11 @@ type phrJob struct {
 	childIndex int
 }
 
-func (p PhrBuilder) queueJob(job *phrJob, wg *sync.WaitGroup) {
-	// Pass job to channel if there is capacity left, otherwise process it directly
-	select {
-	case p.jobs <- job:
-	default:
-		p.buildSubTree(job, wg)
-	}
-}
-
-func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
+func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	// Termination criteria: if only one node is left in the cut, collect its primitives and cobine into new leaf
-
-	/*
-		if len(job.cut.nodes) <= 1 {
-			leaves := make([]*bvhNode, 0)
-			job.cut.nodes[0].collectLeaves(&leaves)
-			prims := make([]int, 0, len(leaves))
-			for _, leaf := range leaves {
-				prims = append(prims, leaf.prims...)
-			}
-			leaf := newLeaf(prims)
-			leaf.bounding = job.cut.bounding
-			job.parent.addChild(leaf, job.childIndex)
-			return
-		}
-	*/
-
 	if len(job.cut.nodes) <= 1 {
-		// Adding the child this way means, that parent pointers will be wrong
-		// This can't be avoided, as the auxiliary BVH would be destroyed otherwise
-		// A solution would be copying the subtree, however, this is not necessarry,
-		// as parent pointers are not used in the final BVH
-		job.parent.children[job.childIndex] = job.cut.nodes[0]
+		job.parent.addChild(job.cut.nodes[0], job.childIndex)
 		return
 	}
 
@@ -143,6 +114,7 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 			break
 		}
 		// Split biggest cut
+		// TODO: Refactor?
 		left, right := p.Split(cuts[maxI])
 		if right != nil {
 			cuts[maxI] = p.refined(*left, job.depth)
@@ -150,12 +122,15 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 		} else {
 			// If cut was not split, make it a leaf node
 			leaves := make([]*bvhNode, 0)
-			left.nodes[0].collectLeaves(&leaves)
+			for _, n := range left.nodes {
+				n.collectLeaves(&leaves)
+			}
 			prims := make([]int, 0, len(leaves))
 			for _, leaf := range leaves {
 				prims = append(prims, leaf.prims...)
 			}
-			leaf := newLeaf(prims)
+			leaf := &bvhNode{}
+			leaf.initLeaf(prims)
 			leaf.bounding = left.bounding
 			cuts[maxI] = phrCut{
 				nodes:    []*bvhNode{leaf},
@@ -166,7 +141,8 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	}
 
 	// Create a new BVH branch
-	branch := newBranch(len(cuts))
+	branch := &bvhNode{}
+	branch.initBranch(len(cuts))
 	branch.parent = job.parent
 	branch.bounding = job.cut.bounding
 	job.parent.addChild(branch, job.childIndex)
@@ -174,16 +150,23 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	// Queue all new children to be processed by this or any other thread
 	wg.Add(len(cuts))
 	for i, cut := range cuts {
-		p.queueJob(&phrJob{
+		job := &phrJob{
 			depth:      job.depth + 1,
 			cut:        cut,
 			parent:     branch,
 			childIndex: i,
-		}, wg)
+		}
+
+		// If channel is full, directly process job
+		select {
+		case p.jobs <- job:
+		default:
+			p.buildSubTree(job, wg)
+		}
 	}
 }
 
-func (p PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
+func (p *PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
 	queue := make(chan *bvhNode, 1024)
 	cut := phrCut{
 		bounding: auxilary.root.bounding,
@@ -204,7 +187,7 @@ func (p PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
 	return cut
 }
 
-func (p PhrBuilder) processNodeInitialCut(node *bvhNode, wg *sync.WaitGroup, m *sync.Mutex, queue chan *bvhNode, cut *[]*bvhNode) {
+func (p *PhrBuilder) processNodeInitialCut(node *bvhNode, wg *sync.WaitGroup, m *sync.Mutex, queue chan *bvhNode, cut *[]*bvhNode) {
 	if node.isLeaf {
 		// Add node to cut, if it is a leaf
 		m.Lock()
@@ -231,15 +214,17 @@ func (p PhrBuilder) processNodeInitialCut(node *bvhNode, wg *sync.WaitGroup, m *
 	}
 }
 
-func (p PhrBuilder) refined(cut phrCut, depth int) phrCut {
+func (p *PhrBuilder) refined(cut phrCut, depth int) phrCut {
 	refinedCut := make([]*bvhNode, 0, len(cut.nodes))
 	for _, node := range cut.nodes {
 		if node.isLeaf {
 			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, depth) {
 				refinedCut = append(refinedCut, node)
 			} else {
+				// TODO: Required?
 				for _, prim := range node.prims {
-					leaf := newLeaf([]int{prim})
+					leaf := &bvhNode{}
+					leaf.initLeaf([]int{prim})
 					leaf.bounding = p.primitives[prim].bounding()
 					refinedCut = append(refinedCut, leaf)
 				}
@@ -273,6 +258,7 @@ type phrCut struct {
 
 type SplitFunction func(phrCut) (*phrCut, *phrCut)
 
+// TODO: Can GC be optimized?
 func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {
 	// Sort along x and y axis using two separate slices
 	sort.SliceStable(cut.nodes, func(i, j int) bool {

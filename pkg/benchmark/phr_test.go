@@ -70,6 +70,7 @@ func BenchmarkPHR_Fast(b *testing.B) {
 			renderer.RenderToBuffer(buff)
 		}
 	})
+
 }
 
 func BenchmarkPHR_Grid(b *testing.B) {
