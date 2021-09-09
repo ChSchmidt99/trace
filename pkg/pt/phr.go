@@ -174,26 +174,7 @@ func (p PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
 	for i := 0; i < threadCount; i++ {
 		go func() {
 			for node := range queue {
-				if node.isLeaf {
-					// Add node to cut, if it is a leaf
-					m.Lock()
-					cut.nodes = append(cut.nodes, node)
-					m.Unlock()
-					wg.Done()
-				} else {
-					// Add children to queue, if
-					if node.bounding.surface() > p.Threshold(p.surface, p.Alpha, p.Delta, 0) {
-						wg.Add(len(node.children) - 1)
-						for _, child := range node.children {
-							queue <- child
-						}
-						continue
-					}
-					m.Lock()
-					cut.nodes = append(cut.nodes, node)
-					m.Unlock()
-					wg.Done()
-				}
+				p.processNodeInitialCut(node, &wg, &m, queue, &cut.nodes)
 			}
 		}()
 	}
@@ -202,6 +183,33 @@ func (p PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
 	wg.Wait()
 	close(queue)
 	return cut
+}
+
+func (p PhrBuilder) processNodeInitialCut(node *bvhNode, wg *sync.WaitGroup, m *sync.Mutex, queue chan *bvhNode, cut *[]*bvhNode) {
+	if node.isLeaf {
+		// Add node to cut, if it is a leaf
+		m.Lock()
+		*cut = append(*cut, node)
+		m.Unlock()
+		wg.Done()
+	} else {
+		if node.bounding.surface() > p.Threshold(p.surface, p.Alpha, p.Delta, 0) {
+			wg.Add(len(node.children) - 1)
+			for _, child := range node.children {
+				// If channel is full, process node directly to avoid deadlock
+				select {
+				case queue <- child:
+				default:
+					p.processNodeInitialCut(child, wg, m, queue, cut)
+				}
+			}
+			return
+		}
+		m.Lock()
+		*cut = append(*cut, node)
+		m.Unlock()
+		wg.Done()
+	}
 }
 
 func (p PhrBuilder) refined(cut phrCut, depth int) phrCut {

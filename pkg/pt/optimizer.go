@@ -63,7 +63,8 @@ func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branchin
 
 func evalPHR(bvh BVH, camera *Camera) float64 {
 	cost := numberOfIntersections(bvh, camera)
-	// TODO: revise cost function
+	// TODO: revise cost function, use weights depending on scene size
+	//fmt.Printf("intersections: %v size: %v\n", cost, bvh.size())
 	return float64(cost * bvh.size())
 }
 
@@ -103,6 +104,8 @@ func (g gridOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branching int
 	minCost := math.MaxFloat64
 	for _, a := range g.Alphas {
 		for _, d := range g.Deltas {
+			builder.Alpha = a
+			builder.Delta = d
 			bvh := builder.BuildFromAuxilary(aux)
 			cost := evalPHR(bvh, camera)
 			if cost < minCost {

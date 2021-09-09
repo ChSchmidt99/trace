@@ -90,7 +90,7 @@ func (bvh *BVH) storeLeaves() {
 }
 
 func (bvh *BVH) size() int {
-	return bvh.root.size
+	return bvh.root.subtreeSize()
 }
 
 type bvhNode struct {
