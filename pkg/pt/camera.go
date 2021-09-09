@@ -72,6 +72,30 @@ func (r ray) Position(t float64) Vector3 {
 	return r.origin.Add(magnitude)
 }
 
+func newRay(origin Vector3, direction Vector3) ray {
+	invDirection := direction.Inverse()
+	sign := [3]int{}
+
+	if invDirection.X < 0 {
+		sign[0] = 1
+	}
+	if invDirection.Y < 0 {
+		sign[1] = 1
+	}
+	if invDirection.Z < 0 {
+		sign[2] = 1
+	}
+
+	dirNormSq := direction.LengthSquared()
+	return ray{
+		origin:         origin,
+		direction:      direction,
+		invDirection:   invDirection,
+		dirNormSquared: dirNormSq,
+		sign:           sign,
+	}
+}
+
 // Creates a new ray by overriding the already allocated ray
 func (r *ray) reuse(origin Vector3, direction Vector3) {
 	invDirection := direction.Inverse()

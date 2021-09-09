@@ -15,7 +15,8 @@ const (
 
 func main() {
 	//scene, camera := demo.CornellBox(ASPECT_RATIO, FOV)
-	scene, camera := demo.Bunny(ASPECT_RATIO, FOV)
+	//scene, camera := demo.Bunny(ASPECT_RATIO, FOV)
+	scene, camera := demo.SanMiguel(ASPECT_RATIO, FOV)
 
 	bvh := scene.Compile()
 	renderer := NewDefaultRenderer(bvh, camera)
@@ -24,8 +25,8 @@ func main() {
 	renderer.Spp = 200
 
 	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)
-	renderer.RenderToBuffer(buff)
-	//renderer.IntersectionHeatMapToBuffer(buff)
+	//renderer.RenderToBuffer(buff)
+	renderer.IntersectionHeatMapToBuffer(buff)
 	img := buff.ToImage()
 	f, err := os.Create("test.png")
 	if err != nil {

@@ -5,6 +5,12 @@ import (
 	"sync/atomic"
 )
 
+// TODO: Set constants
+const (
+	INTERSECTION_COST = 7  // roughly approximated cost of intersection calculation
+	TRAVERSAL_COST    = 43 // cost of traversal relative to intersection cost
+)
+
 type BVH struct {
 	root   *bvhNode
 	prims  []tracable
@@ -12,12 +18,11 @@ type BVH struct {
 }
 
 // Number of intersection tests executed for given ray, including node bounding boxes and leaf primitives
-func (bvh *BVH) intersectionTests(ray ray, tMin, tMax float64) int {
+func (bvh *BVH) traversalSteps(ray ray, tMin, tMax float64) int {
 	stack := bvhStack{}
 	stack.push(bvh.root)
 	count := 0
 	closest := tMax
-	hitOut := hit{}
 	for {
 		node := stack.pop()
 		if node == nil {
@@ -25,19 +30,15 @@ func (bvh *BVH) intersectionTests(ray ray, tMin, tMax float64) int {
 		}
 		count++
 		if node.bounding.intersected(ray, tMin, closest) {
-			if node.isLeaf {
-				count += len(node.prims)
-				for i := 0; i < len(node.prims); i++ {
-					prim := bvh.prims[node.prims[i]]
-					if prim.intersected(ray, tMin, closest, &hitOut) {
-						closest = hitOut.t
-					}
-				}
-			} else {
+			if !node.isLeaf {
 				stack.push(node.children...)
 			}
 		}
 	}
+}
+
+func (bvh *BVH) cost() float64 {
+	return bvh.root.cost()
 }
 
 func (bvh *BVH) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
@@ -164,6 +165,20 @@ func (node *bvhNode) updateAABB(primitives []tracable) {
 	}
 	if atomic.AddUint32(&node.parent.childAABBset, 1)%uint32(len(node.parent.children)) == 0 {
 		node.parent.updateAABB(primitives)
+	}
+}
+
+// Measurement of the bvh quality
+func (node *bvhNode) cost() float64 {
+	if node.isLeaf {
+		return INTERSECTION_COST * float64(len(node.prims))
+	} else {
+		childCosts := 0.0
+		for _, child := range node.children {
+			probability := child.bounding.surface() / node.bounding.surface()
+			childCosts += probability * child.cost()
+		}
+		return TRAVERSAL_COST + childCosts
 	}
 }
 

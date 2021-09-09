@@ -13,7 +13,7 @@ const (
 	RESOLUTION       = 256
 	PHR_FAST_ALPHA   = 0.5
 	PHR_FAST_DELTA   = 6
-	BRANCHING_FACTOR = 4
+	BRANCHING_FACTOR = 2
 )
 
 func BenchmarkPHR_Fast_Bunny(b *testing.B) {
@@ -51,6 +51,27 @@ func BenchmarkPHR_Grid_Bunny(b *testing.B) {
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			bvh = builder.BuildFromAuxilary(aux)
+		}
+	})
+	b.Run("Render", func(b *testing.B) {
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+}
+
+func BenchmarkLBVH_Bunny(b *testing.B) {
+	scene, camera := demoscenes.Bunny(AR, FOV)
+	var bvh pt.BVH
+	b.Run("Build", func(b *testing.B) {
+		primitives := scene.Tracables()
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			bvh = pt.DefaultLBVH(primitives)
 		}
 	})
 	b.Run("Render", func(b *testing.B) {

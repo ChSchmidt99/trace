@@ -136,7 +136,7 @@ func (r *Renderer) IntersectionHeatMapToBuffer(buff Buffer) {
 					u := (float64(x) + c.rand.Float64()) / float64(w-1)
 					v := (float64(y) + c.rand.Float64()) / float64(h-1)
 					r.Camera.castRayReuse(u, v, &ray)
-					count := r.Bvh.intersectionTests(ray, 0.001, math.Inf(1))
+					count := r.Bvh.traversalSteps(ray, 0.001, math.MaxFloat64)
 					buff.addSample(x, y, r.intersectionCount(count))
 				}
 			}
