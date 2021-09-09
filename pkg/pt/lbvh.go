@@ -31,7 +31,6 @@ type mortonPair struct {
 }
 
 // Iterates over all primitives in parallel and assigns morton codes
-// TODO: Check if returning a corresponding morton code slice is faster than using structs!
 func assignMortonCodes(prims []tracable, enclosing aabb, mortonSize uint32, threads int) []mortonPair {
 	pairs := make([]mortonPair, len(prims))
 	batchSize := int(math.Ceil(float64(len(prims)) / float64(threads)))
@@ -150,8 +149,7 @@ func (job *lbvhJob) process(queue *lbvhWorkerQueue) {
 	// Find the split in the given interval where the most significant bit first changes
 	splitIndex := findSplit(job.pairs, job.splitMask)
 
-	// TODO: Remove and rollup singletons after?
-	// If there is no split, only spawn one job, which makes pruning step afterwards obsolete
+	// If there is no split, only spawn one job, which makes pruning step afterwards obsolete and saves construction work
 	if splitIndex == 0 || splitIndex == len(job.pairs) {
 		queue.add(&lbvhJob{
 			pairs:      job.pairs,

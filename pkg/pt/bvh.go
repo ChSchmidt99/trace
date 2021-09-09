@@ -89,6 +89,10 @@ func (bvh *BVH) storeLeaves() {
 	bvh.root.collectLeaves(&bvh.leaves)
 }
 
+func (bvh *BVH) size() int {
+	return bvh.root.size
+}
+
 type bvhNode struct {
 	parent       *bvhNode
 	prims        []int

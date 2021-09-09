@@ -16,7 +16,6 @@ type PhrBuilder struct {
 	jobs            chan *phrJob
 	threadCount     int
 	primitives      []tracable
-	enclosing       aabb
 	surface         float64
 }
 
@@ -25,7 +24,6 @@ func NewDefaultBuilder(primitives []tracable) PhrBuilder {
 }
 
 func NewPHRBuilder(primitives []tracable, alpha float64, delta int, branchingFactor int, threadCount int) PhrBuilder {
-	box := enclosing(primitives)
 	return PhrBuilder{
 		Alpha:           alpha,
 		Delta:           delta,
@@ -34,20 +32,17 @@ func NewPHRBuilder(primitives []tracable, alpha float64, delta int, branchingFac
 		Split:           SweepSAH,
 		primitives:      primitives,
 		threadCount:     threadCount,
-		enclosing:       box,
-		surface:         box.surface(),
 	}
 }
 
 func (p PhrBuilder) Build() BVH {
-	auxilaryBVH := LBVH(p.primitives, p.enclosing, p.threadCount)
+	auxilaryBVH := LBVH(p.primitives, enclosing(p.primitives), p.threadCount)
 	return p.BuildFromAuxilary(auxilaryBVH)
 }
 
 func (p PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
-
+	p.surface = auxilaryBVH.root.bounding.surface()
 	// Determine initial cut
-	//cut := p.findInitialCut(auxilaryBVH)
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
 	// Start workers
 	wg := sync.WaitGroup{}
@@ -62,7 +57,7 @@ func (p PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 
 	// Temporary branch as a starting point, will be discared afterwards
 	temp := newBranch(1)
-	temp.bounding = p.enclosing
+	temp.bounding = auxilaryBVH.root.bounding
 	wg.Add(1)
 
 	// Start initial job
@@ -119,7 +114,11 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 		}
 	*/
 	if len(job.cut.nodes) <= 1 {
-		job.parent.addChild(job.cut.nodes[0], job.childIndex)
+		// Adding the child this way means, that parent pointers will be wrong
+		// This can't be avoided, as the auxiliary BVH would be destroyed otherwise
+		// A solution would be copying the subtree, however, this is not necessarry,
+		// as parent pointers are not used in the final BVH
+		job.parent.children[job.childIndex] = job.cut.nodes[0]
 		return
 	}
 

@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - Implemented PHR BVH builder
-- benchmark package including all benchmarks conducted
+- Benchmark package including all benchmarks conducted
 - Added optional unlit renderer
 - Implemented parallel bucket sort
+- Optimizer that uses Grid Search and Bayesian Optimization to optimize PHR parameters 
 ### Changed 
 - Fixed bug in enclosing functions
 - Parallelized PHR find initial Cut
