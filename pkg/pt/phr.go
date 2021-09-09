@@ -144,8 +144,25 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 		}
 		// Split biggest cut
 		left, right := p.Split(cuts[maxI])
-		cuts[maxI] = p.refined(left, job.depth)
-		cuts = append(cuts, p.refined(right, job.depth))
+		if right != nil {
+			cuts[maxI] = p.refined(*left, job.depth)
+			cuts = append(cuts, p.refined(*right, job.depth))
+		} else {
+			// If cut was not split, make it a leaf node
+			leaves := make([]*bvhNode, 0)
+			left.nodes[0].collectLeaves(&leaves)
+			prims := make([]int, 0, len(leaves))
+			for _, leaf := range leaves {
+				prims = append(prims, leaf.prims...)
+			}
+			leaf := newLeaf(prims)
+			leaf.bounding = left.bounding
+			cuts[maxI] = phrCut{
+				nodes:    []*bvhNode{leaf},
+				bounding: leaf.bounding,
+			}
+			return
+		}
 	}
 
 	// Create a new BVH branch
@@ -254,19 +271,9 @@ type phrCut struct {
 	bounding aabb
 }
 
-type SplitFunction func(phrCut) (phrCut, phrCut)
+type SplitFunction func(phrCut) (*phrCut, *phrCut)
 
-func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
-	if len(cut.nodes) == 2 {
-		return phrCut{
-				nodes:    cut.nodes[:1],
-				bounding: cut.nodes[0].bounding,
-			}, phrCut{
-				nodes:    cut.nodes[1:],
-				bounding: cut.nodes[1].bounding,
-			}
-	}
-
+func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {
 	// Sort along x and y axis using two separate slices
 	sort.SliceStable(cut.nodes, func(i, j int) bool {
 		return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
@@ -277,8 +284,8 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 		return sorted2[i].bounding.barycenter.Y < sorted2[j].bounding.barycenter.Y
 	})
 
-	xSAH := minCost(cut.nodes)
-	ySAH := minCost(sorted2)
+	xSAH := minCost(cut.nodes, cut.bounding)
+	ySAH := minCost(sorted2, cut.bounding)
 	// Keep the sorted slice with lower cost and override the other by sorting along z axis
 	// Finally, return the split with the lowest cost
 
@@ -286,7 +293,7 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 		sort.SliceStable(sorted2, func(i, j int) bool {
 			return sorted2[i].bounding.barycenter.Z < sorted2[j].bounding.barycenter.Z
 		})
-		zSAH := minCost(sorted2)
+		zSAH := minCost(sorted2, cut.bounding)
 		if xSAH.cost < zSAH.cost {
 			return xSAH.left, xSAH.right
 		} else {
@@ -296,7 +303,7 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 		sort.SliceStable(cut.nodes, func(i, j int) bool {
 			return cut.nodes[i].bounding.barycenter.Z < cut.nodes[j].bounding.barycenter.Z
 		})
-		zSAH := minCost(cut.nodes)
+		zSAH := minCost(cut.nodes, cut.bounding)
 		if ySAH.cost < zSAH.cost {
 			return ySAH.left, ySAH.right
 		} else {
@@ -305,17 +312,15 @@ func SweepSAH(cut phrCut) (l phrCut, r phrCut) {
 	}
 }
 
+// TODO: Rather use index instead of allocating? Memprofile
 type sah struct {
-	left  phrCut
-	right phrCut
+	left  *phrCut
+	right *phrCut
 	cost  float64
 }
 
 // Uses SAH to compute the best split
-func minCost(sortedNodes []*bvhNode) sah {
-	min := sah{
-		cost: math.Inf(1),
-	}
+func minCost(sortedNodes []*bvhNode, bounding aabb) sah {
 	// Compute and track right costs by incrementally extending bounding box
 	SaRight := sortedNodes[len(sortedNodes)-1].bounding
 	rightCosts := make([]float64, len(sortedNodes))
@@ -331,6 +336,15 @@ func minCost(sortedNodes []*bvhNode) sah {
 		}
 	}
 
+	nodeCount += sortedNodes[0].subtreeSize()
+	min := sah{
+		cost: bounding.surface() * float64(nodeCount),
+		left: &phrCut{
+			nodes:    sortedNodes,
+			bounding: bounding,
+		},
+	}
+
 	// Incrementally extend left box and use tracked right costs to compute full SAH cost
 	nodeCount = sortedNodes[0].subtreeSize()
 	SaLeft := sortedNodes[0].bounding
@@ -338,11 +352,11 @@ func minCost(sortedNodes []*bvhNode) sah {
 		cost := rightCosts[i] + SaLeft.surface()*float64(nodeCount)
 		if cost < min.cost {
 			min.cost = cost
-			min.left = phrCut{
+			min.left = &phrCut{
 				nodes:    sortedNodes[:i],
 				bounding: SaLeft,
 			}
-			min.right = rightCuts[i]
+			min.right = &rightCuts[i]
 		}
 		SaLeft = SaLeft.add(sortedNodes[i].bounding)
 		nodeCount += sortedNodes[i].subtreeSize()

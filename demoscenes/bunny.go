@@ -2,7 +2,7 @@ package demoscenes
 
 import . "github/chschmidt99/pt/pkg/pt"
 
-func Bunny(ar, fov float64) (*Scene, *Camera) {
+func Bunny(ar, fov float64) DemoScene {
 	geometry := ParseFromPath("../../assets/local/bunny/bunny.obj")
 	whiteMat := Diffuse{Albedo: NewColor(.73, .73, .73)}
 	bunny := NewSceneNode(NewMesh(geometry, whiteMat))
@@ -15,5 +15,9 @@ func Bunny(ar, fov float64) (*Scene, *Camera) {
 		Up:       NewVector3(0, 1, 0),
 	})
 
-	return scene, camera
+	return DemoScene{
+		Name:    "Bunny",
+		Scene:   scene,
+		Cameras: []*Camera{camera},
+	}
 }
