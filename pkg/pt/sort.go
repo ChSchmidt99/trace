@@ -16,8 +16,8 @@ type mergeJob struct {
 }
 
 // Parallel bucket sort
-func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, threads int) {
-	bucketCollection, bucketFill := fillBuckets(pairs, numberOfBuckets, maxMorton, threads)
+func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, threads int) {
+	bucketCollection, bucketFill := fillBuckets(pairs, numberOfBuckets, threads)
 	merge(pairs, bucketFill, bucketCollection, numberOfBuckets, threads)
 }
 
@@ -26,7 +26,7 @@ func sortMortonPairs(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, 
 // Return:
 // buckets: [threads][numberOfBuckets]bucket => one slice of buckets for each thread
 // bucketFill: holds how many pairs have been inserted into the corresponding bucket
-func fillBuckets(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, threads int) (buckets [][]bucket, bucketFill []int32) {
+func fillBuckets(pairs []mortonPair, numberOfBuckets int, threads int) (buckets [][]bucket, bucketFill []int32) {
 	batchSize := int(math.Ceil(float64(len(pairs)) / float64(threads)))
 	bucketCollection := make([][]bucket, 0, threads)
 	bucketEntries := make([]int32, numberOfBuckets)
@@ -40,7 +40,7 @@ func fillBuckets(pairs []mortonPair, numberOfBuckets int, maxMorton uint64, thre
 		}
 		end := int(math.Min(float64(start+batchSize), float64(len(pairs))))
 		bucketCollection = append(bucketCollection, make([]bucket, numberOfBuckets))
-		bucketSize := maxMorton / uint64(numberOfBuckets)
+		bucketSize := MAX_MORTON_CODE / uint64(numberOfBuckets)
 		wg.Add(1)
 		go func(input []mortonPair, threadNumber int) {
 			for _, pair := range input {

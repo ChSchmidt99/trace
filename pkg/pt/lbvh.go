@@ -6,8 +6,6 @@ import (
 	"sync"
 )
 
-var MORTON_SIZE = uint32(math.Pow(2, 20))
-
 const BUCKET_COUNT = 4096
 
 func DefaultLBVH(prims []tracable) BVH {
@@ -15,9 +13,8 @@ func DefaultLBVH(prims []tracable) BVH {
 }
 
 func LBVH(prims []tracable, enclosing aabb, threads int) BVH {
-	pairs := assignMortonCodes(prims, enclosing, MORTON_SIZE, threads)
-	maxMorton := uint64(math.Pow(float64(MORTON_SIZE), 3))
-	sortMortonPairs(pairs, BUCKET_COUNT, maxMorton, threads)
+	pairs := assignMortonCodes(prims, enclosing, threads)
+	sortMortonPairs(pairs, BUCKET_COUNT, threads)
 	bvh := constructLBVH(pairs, MORTON_SIZE, threads)
 	bvh.prims = prims
 	bvh.storeLeaves()
@@ -31,7 +28,7 @@ type mortonPair struct {
 }
 
 // Iterates over all primitives in parallel and assigns morton codes
-func assignMortonCodes(prims []tracable, enclosing aabb, mortonSize uint32, threads int) []mortonPair {
+func assignMortonCodes(prims []tracable, enclosing aabb, threads int) []mortonPair {
 	pairs := make([]mortonPair, len(prims))
 	batchSize := int(math.Ceil(float64(len(prims)) / float64(threads)))
 	wg := sync.WaitGroup{}
@@ -47,9 +44,8 @@ func assignMortonCodes(prims []tracable, enclosing aabb, mortonSize uint32, thre
 			end = len(prims)
 		}
 		go func() {
-			morton := NewMorton(3, mortonSize)
 			for j := start; j < end; j++ {
-				code := computeMorton(prims[j], morton, enclosing, mortonSize)
+				code := computeMorton(prims[j], enclosing)
 				pairs[j] = mortonPair{
 					primIndex:  j,
 					mortonCode: code,
@@ -63,22 +59,21 @@ func assignMortonCodes(prims []tracable, enclosing aabb, mortonSize uint32, thre
 }
 
 // Computes a morton code according to the quantized primitive centroid
-func computeMorton(prim tracable, morton *Morton, enclosing aabb, mortonSize uint32) uint64 {
+func computeMorton(prim tracable, enclosing aabb) uint64 {
 	center := prim.bounding().barycenter
 	deltaX := math.Abs(enclosing.bounds[0].X - center.X)
 	deltaY := math.Abs(enclosing.bounds[0].Y - center.Y)
 	deltaZ := math.Abs(enclosing.bounds[0].Z - center.Z)
-	xQuantized := uint32(deltaX / (enclosing.width / float64(mortonSize-1)))
-	yQuantized := uint32(deltaY / (enclosing.height / float64(mortonSize-1)))
-	zQuantized := uint32(deltaZ / (enclosing.depth / float64(mortonSize-1)))
-	vec := []uint32{xQuantized, yQuantized, zQuantized}
-	encoded, _ := morton.Encode(vec)
-	return encoded
+	xQuantized := uint64(deltaX / (enclosing.width / float64(MORTON_SIZE-1)))
+	yQuantized := uint64(deltaY / (enclosing.height / float64(MORTON_SIZE-1)))
+	zQuantized := uint64(deltaZ / (enclosing.depth / float64(MORTON_SIZE-1)))
+	return encodeCompute(xQuantized, yQuantized, zQuantized)
 }
 
 // Constructs BVH by inserting sorted morton primitive pairs into a binary radix tree
 func constructLBVH(pairs []mortonPair, mortonSize uint32, threads int) BVH {
-	splitMask := uint64(math.Pow(float64(mortonSize), 3)) / 2
+	var splitMask uint64 = 1 << 62
+
 	wg := sync.WaitGroup{}
 	wg.Add(len(pairs))
 	queue := lbvhWorkerQueue{

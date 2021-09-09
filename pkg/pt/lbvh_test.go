@@ -50,6 +50,6 @@ func TestAssignMortonCodes(t *testing.T) {
 			mortonCode: 7,
 		},
 	}
-	pairs := assignMortonCodes([]tracable{{prim: prim1}, {prim: prim2}, {prim: prim3}}, enclosing, 4, 4)
+	pairs := assignMortonCodes([]tracable{{prim: prim1}, {prim: prim2}, {prim: prim3}}, enclosing, 4)
 	assert.Equal(t, expected, pairs)
 }

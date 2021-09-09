@@ -210,10 +210,14 @@ func SkyMissShader(renderer *ImageRenderer, c context, r ray) Color {
 type TraversalCountShader func(count int) Color
 
 func DefaultTraversalCountShader(count int) Color {
-	if count > 100 {
-		factor := float64(count) / 150
+	if count > 500 {
+		factor := float64(count) / 800
 		return NewColor(factor, 0, 0)
 	}
-	factor := float64(count) / 100
+	if count > 300 {
+		factor := float64(count) / 500
+		return NewColor(0, factor, 0)
+	}
+	factor := float64(count) / 300
 	return NewColor(0, 0, factor)
 }

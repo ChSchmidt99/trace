@@ -13,8 +13,8 @@ const (
 	RESOLUTION       = 256
 	PHR_FAST_ALPHA   = 0.5
 	PHR_FAST_DELTA   = 6
-	PHR_HQ_ALPHA     = 0.55
-	PHR_HQ_DELTA     = 9
+	PHR_HQ_ALPHA     = 0.5
+	PHR_HQ_DELTA     = 6
 	BRANCHING_FACTOR = 2
 )
 
@@ -29,7 +29,7 @@ func BenchmarkPHR_HQ(b *testing.B) {
 	b.Run("Build "+name, func(b *testing.B) {
 		primitives := scene.Tracables()
 		aux := pt.DefaultLBVH(primitives)
-		builder := pt.NewPHRBuilder(primitives, PHR_FAST_ALPHA, PHR_FAST_DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		builder := pt.NewPHRBuilder(primitives, PHR_HQ_ALPHA, PHR_HQ_DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			bvh = builder.BuildFromAuxilary(aux)

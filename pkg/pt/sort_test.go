@@ -1,19 +1,16 @@
 package pt
 
 import (
-	"fmt"
 	"math"
 	"math/rand"
 	"runtime"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 var result []mortonPair
 
 func BenchmarkSort(b *testing.B) {
-	maxCode := uint64(math.Pow(float64(MORTON_SIZE), 3)) - 1
+	maxCode := int64(math.Pow(float64(MORTON_SIZE), 3)) - 1
 	size := 10000000
 	/*
 		b.Run("Go Sort", func(b *testing.B) {
@@ -30,24 +27,10 @@ func BenchmarkSort(b *testing.B) {
 		sample := generateTestSet(size, int(maxCode))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
-			sortMortonPairs(sample, 4096, maxCode, runtime.GOMAXPROCS(0))
+			sortMortonPairs(sample, 4096, runtime.GOMAXPROCS(0))
 		}
 		result = sample
 	})
-}
-
-func TestBucketSort(t *testing.T) {
-	size := 1000000
-	maxCode := uint64(math.Pow(float64(MORTON_SIZE), 3))
-	//maxCode := 1024
-	sample := generateTestSet(size, int(maxCode))
-	sortMortonPairs(sample, 4096, uint64(maxCode), runtime.GOMAXPROCS(0))
-	for i := 1; i < len(sample); i++ {
-		if sample[i].mortonCode < sample[i-1].mortonCode {
-			fmt.Printf("First: %v Second: %v\n", sample[i-1], sample[i])
-			assert.Fail(t, "Not sorted properly")
-		}
-	}
 }
 
 /*

@@ -4,6 +4,7 @@ import . "github/chschmidt99/pt/pkg/pt"
 
 func SanMiguel(ar, fov float64) DemoScene {
 	geometry := ParseFromPath("../../assets/local/san_miguel/san-miguel-low-poly.obj")
+	//geometry := ParseFromPath("../../assets/local/san_miguel/san-miguel.obj")
 	whiteMat := Diffuse{Albedo: NewColor(.73, .73, .73)}
 	bunny := NewSceneNode(NewMesh(geometry, whiteMat))
 	scene := NewScene()

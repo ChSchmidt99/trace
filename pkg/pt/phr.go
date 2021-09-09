@@ -44,6 +44,7 @@ func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	p.surface = auxilaryBVH.root.bounding.surface()
 	// Determine initial cut
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
+
 	// Start workers
 	wg := sync.WaitGroup{}
 	p.jobs = make(chan *phrJob, p.threadCount)
@@ -133,8 +134,7 @@ func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 			leaf.initLeaf(prims)
 			leaf.bounding = left.bounding
 			cuts[maxI] = phrCut{
-				nodes:    []*bvhNode{leaf},
-				bounding: leaf.bounding,
+				nodes: []*bvhNode{leaf},
 			}
 			return
 		}
@@ -221,7 +221,6 @@ func (p *PhrBuilder) refined(cut phrCut, depth int) phrCut {
 			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, depth) {
 				refinedCut = append(refinedCut, node)
 			} else {
-				// TODO: Required?
 				for _, prim := range node.prims {
 					leaf := &bvhNode{}
 					leaf.initLeaf([]int{prim})
