@@ -28,10 +28,10 @@ func (bvh *BVH) traversalSteps(ray ray, tMin, tMax float64) int {
 		if node == nil {
 			return count
 		}
-		count++
 		if node.bounding.intersected(ray, tMin, closest) {
 			if !node.isLeaf {
 				stack.push(node.children...)
+				count++
 			}
 		}
 	}

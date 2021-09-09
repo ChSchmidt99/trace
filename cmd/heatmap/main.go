@@ -19,12 +19,7 @@ func main() {
 	demoScene := demo.SanMiguel(ASPECT_RATIO, FOV)
 
 	bvh := demoScene.Scene.Compile()
-	renderer := NewDefaultRenderer(bvh, demoScene.Cameras[0])
-	renderer.Closest = UnlitClosestHitShader
-	renderer.Miss = SkyMissShader
-	renderer.Spp = 200
-	renderer.Verbose = true
-
+	renderer := NewHeatMapRenderer(bvh, demoScene.Cameras[0])
 	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)
 	renderer.RenderToBuffer(buff)
 	img := buff.ToImage()

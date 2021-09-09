@@ -13,13 +13,20 @@ const (
 	RESOLUTION       = 256
 	PHR_FAST_ALPHA   = 0.5
 	PHR_FAST_DELTA   = 6
+	PHR_HQ_ALPHA     = 0.55
+	PHR_HQ_DELTA     = 9
 	BRANCHING_FACTOR = 2
 )
 
-func BenchmarkPHR_Fast_Bunny(b *testing.B) {
-	scene, camera := demoscenes.Bunny(AR, FOV)
+var DEMO_SCENE = demoscenes.SanMiguel(AR, FOV)
+
+func BenchmarkPHR_HQ(b *testing.B) {
+	scene := DEMO_SCENE.Scene
+	camera := DEMO_SCENE.Cameras[0]
+	name := DEMO_SCENE.Name
+
 	var bvh pt.BVH
-	b.Run("Build", func(b *testing.B) {
+	b.Run("Build "+name, func(b *testing.B) {
 		primitives := scene.Tracables()
 		aux := pt.DefaultLBVH(primitives)
 		builder := pt.NewPHRBuilder(primitives, PHR_FAST_ALPHA, PHR_FAST_DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
@@ -28,7 +35,7 @@ func BenchmarkPHR_Fast_Bunny(b *testing.B) {
 			bvh = builder.BuildFromAuxilary(aux)
 		}
 	})
-	b.Run("Render", func(b *testing.B) {
+	b.Run("Render "+name, func(b *testing.B) {
 		renderer := pt.NewDefaultRenderer(bvh, camera)
 		renderer.Spp = 1
 		buff := pt.NewBufferAspect(RESOLUTION, AR)
@@ -39,11 +46,40 @@ func BenchmarkPHR_Fast_Bunny(b *testing.B) {
 	})
 }
 
-func BenchmarkPHR_Grid_Bunny(b *testing.B) {
-	optimizer := pt.NewGridOptimizer([]float64{0.45, 0.5, 0.55, 0.65}, []int{5, 6, 7, 8, 9, 10})
-	scene, camera := demoscenes.Bunny(AR, FOV)
+func BenchmarkPHR_Fast(b *testing.B) {
+	scene := DEMO_SCENE.Scene
+	camera := DEMO_SCENE.Cameras[0]
+	name := DEMO_SCENE.Name
+
 	var bvh pt.BVH
-	b.Run("Build", func(b *testing.B) {
+	b.Run("Build "+name, func(b *testing.B) {
+		primitives := scene.Tracables()
+		aux := pt.DefaultLBVH(primitives)
+		builder := pt.NewPHRBuilder(primitives, PHR_FAST_ALPHA, PHR_FAST_DELTA, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			bvh = builder.BuildFromAuxilary(aux)
+		}
+	})
+	b.Run("Render "+name, func(b *testing.B) {
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+}
+
+func BenchmarkPHR_Grid(b *testing.B) {
+	optimizer := pt.NewGridOptimizer([]float64{0.45, 0.5, 0.55, 0.65}, []int{5, 6, 7, 8, 9, 10})
+	scene := DEMO_SCENE.Scene
+	camera := DEMO_SCENE.Cameras[0]
+	name := DEMO_SCENE.Name
+
+	var bvh pt.BVH
+	b.Run("Build "+name, func(b *testing.B) {
 		primitives := scene.Tracables()
 		aux := pt.DefaultLBVH(primitives)
 		a, d := optimizer.OptimizedPHRparams(aux, camera, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
@@ -53,7 +89,7 @@ func BenchmarkPHR_Grid_Bunny(b *testing.B) {
 			bvh = builder.BuildFromAuxilary(aux)
 		}
 	})
-	b.Run("Render", func(b *testing.B) {
+	b.Run("Render "+name, func(b *testing.B) {
 		renderer := pt.NewDefaultRenderer(bvh, camera)
 		renderer.Spp = 1
 		buff := pt.NewBufferAspect(RESOLUTION, AR)
@@ -64,17 +100,20 @@ func BenchmarkPHR_Grid_Bunny(b *testing.B) {
 	})
 }
 
-func BenchmarkLBVH_Bunny(b *testing.B) {
-	scene, camera := demoscenes.Bunny(AR, FOV)
+func BenchmarkLBVH(b *testing.B) {
+	scene := DEMO_SCENE.Scene
+	camera := DEMO_SCENE.Cameras[0]
+	name := DEMO_SCENE.Name
+
 	var bvh pt.BVH
-	b.Run("Build", func(b *testing.B) {
+	b.Run("Build "+name, func(b *testing.B) {
 		primitives := scene.Tracables()
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
 			bvh = pt.DefaultLBVH(primitives)
 		}
 	})
-	b.Run("Render", func(b *testing.B) {
+	b.Run("Render "+name, func(b *testing.B) {
 		renderer := pt.NewDefaultRenderer(bvh, camera)
 		renderer.Spp = 1
 		buff := pt.NewBufferAspect(RESOLUTION, AR)

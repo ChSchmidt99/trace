@@ -100,29 +100,29 @@ func (p PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 
 	// Termination criteria: if only one node is left in the cut, collect its primitives and cobine into new leaf
 
-	if len(job.cut.nodes) <= 1 {
-		leaves := make([]*bvhNode, 0)
-		job.cut.nodes[0].collectLeaves(&leaves)
-		prims := make([]int, 0, len(leaves))
-		for _, leaf := range leaves {
-			prims = append(prims, leaf.prims...)
-		}
-		leaf := newLeaf(prims)
-		leaf.bounding = job.cut.bounding
-		job.parent.addChild(leaf, job.childIndex)
-		return
-	}
-
 	/*
 		if len(job.cut.nodes) <= 1 {
-			// Adding the child this way means, that parent pointers will be wrong
-			// This can't be avoided, as the auxiliary BVH would be destroyed otherwise
-			// A solution would be copying the subtree, however, this is not necessarry,
-			// as parent pointers are not used in the final BVH
-			job.parent.children[job.childIndex] = job.cut.nodes[0]
+			leaves := make([]*bvhNode, 0)
+			job.cut.nodes[0].collectLeaves(&leaves)
+			prims := make([]int, 0, len(leaves))
+			for _, leaf := range leaves {
+				prims = append(prims, leaf.prims...)
+			}
+			leaf := newLeaf(prims)
+			leaf.bounding = job.cut.bounding
+			job.parent.addChild(leaf, job.childIndex)
 			return
 		}
 	*/
+
+	if len(job.cut.nodes) <= 1 {
+		// Adding the child this way means, that parent pointers will be wrong
+		// This can't be avoided, as the auxiliary BVH would be destroyed otherwise
+		// A solution would be copying the subtree, however, this is not necessarry,
+		// as parent pointers are not used in the final BVH
+		job.parent.children[job.childIndex] = job.cut.nodes[0]
+		return
+	}
 
 	cuts := make([]phrCut, 1, p.BranchingFactor)
 	cuts[0] = job.cut
