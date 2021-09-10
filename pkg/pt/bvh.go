@@ -104,15 +104,19 @@ type bvhNode struct {
 	size         int
 }
 
-func (node *bvhNode) initLeaf(prims []int) {
-	node.isLeaf = true
-	node.size = 1
-	node.prims = prims
+func newLeaf(prims []int) *bvhNode {
+	return &bvhNode{
+		prims:  prims,
+		isLeaf: true,
+		size:   1,
+	}
 }
 
-func (node *bvhNode) initBranch(children int) {
-	node.isLeaf = false
-	node.children = make([]*bvhNode, children)
+func newBranch(children int) *bvhNode {
+	return &bvhNode{
+		children: make([]*bvhNode, children),
+		isLeaf:   false,
+	}
 }
 
 func (node *bvhNode) addChild(child *bvhNode, index int) {

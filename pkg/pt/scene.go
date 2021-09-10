@@ -1,6 +1,8 @@
 package pt
 
-import "runtime"
+import (
+	"runtime"
+)
 
 type Scene struct {
 	root *SceneNode

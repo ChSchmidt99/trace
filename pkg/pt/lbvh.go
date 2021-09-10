@@ -90,8 +90,7 @@ func constructLBVH(pairs []mortonPair, mortonSize uint32, threads int) BVH {
 		}(&queue)
 	}
 
-	temp := &bvhNode{}
-	temp.initBranch(1)
+	temp := newBranch(1)
 
 	initialJob := lbvhJob{
 		pairs:      pairs,
@@ -137,8 +136,7 @@ func (job *lbvhJob) process(queue *lbvhWorkerQueue) {
 			indeces[i] = pair.primIndex
 			queue.wg.Done()
 		}
-		leaf := &bvhNode{}
-		leaf.initLeaf(indeces)
+		leaf := newLeaf(indeces)
 		job.parent.addChild(leaf, job.childIndex)
 		queue.wg.Done()
 		return
@@ -158,8 +156,7 @@ func (job *lbvhJob) process(queue *lbvhWorkerQueue) {
 		return
 	}
 	// Create a new branch and spawn new jobs for both children
-	branch := &bvhNode{}
-	branch.initBranch(2)
+	branch := newBranch(2)
 	job.parent.addChild(branch, job.childIndex)
 	left := job.pairs[:splitIndex]
 	right := job.pairs[splitIndex:]

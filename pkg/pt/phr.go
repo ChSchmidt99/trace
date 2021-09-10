@@ -57,8 +57,7 @@ func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	}
 
 	// Temporary branch as a starting point, will be discared afterwards
-	temp := &bvhNode{}
-	temp.initBranch(1)
+	temp := newBranch(1)
 	temp.bounding = auxilaryBVH.root.bounding
 	wg.Add(1)
 
@@ -130,19 +129,16 @@ func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 			for _, leaf := range leaves {
 				prims = append(prims, leaf.prims...)
 			}
-			leaf := &bvhNode{}
-			leaf.initLeaf(prims)
+			leaf := newLeaf(prims)
 			leaf.bounding = left.bounding
 			cuts[maxI] = phrCut{
 				nodes: []*bvhNode{leaf},
 			}
-			return
 		}
 	}
 
 	// Create a new BVH branch
-	branch := &bvhNode{}
-	branch.initBranch(len(cuts))
+	branch := newBranch(len(cuts))
 	branch.parent = job.parent
 	branch.bounding = job.cut.bounding
 	job.parent.addChild(branch, job.childIndex)
@@ -222,8 +218,7 @@ func (p *PhrBuilder) refined(cut phrCut, depth int) phrCut {
 				refinedCut = append(refinedCut, node)
 			} else {
 				for _, prim := range node.prims {
-					leaf := &bvhNode{}
-					leaf.initLeaf([]int{prim})
+					leaf := newLeaf([]int{prim})
 					leaf.bounding = p.primitives[prim].bounding()
 					refinedCut = append(refinedCut, leaf)
 				}
@@ -257,7 +252,7 @@ type phrCut struct {
 
 type SplitFunction func(phrCut) (*phrCut, *phrCut)
 
-// TODO: Can GC be optimized?
+// TODO: Can GC be optimized? Reuse slice
 func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {
 	// Sort along x and y axis using two separate slices
 	sort.SliceStable(cut.nodes, func(i, j int) bool {

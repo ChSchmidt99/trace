@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	demo "github/chschmidt99/pt/demoscenes"
 	. "github/chschmidt99/pt/pkg/pt"
 	"image/png"
@@ -18,7 +19,10 @@ func main() {
 	//scene, camera := demo.Bunny(ASPECT_RATIO, FOV)
 	demoScene := demo.SanMiguel(ASPECT_RATIO, FOV)
 
+	fmt.Printf("Prims: %v\n", len(demoScene.Scene.Tracables()))
+
 	bvh := demoScene.Scene.Compile()
+
 	renderer := NewHeatMapRenderer(bvh, demoScene.Cameras[0])
 	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)
 	renderer.RenderToBuffer(buff)
