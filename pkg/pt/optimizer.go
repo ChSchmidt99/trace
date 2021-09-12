@@ -66,7 +66,7 @@ func evalPHR(bvh BVH, camera *Camera) float64 {
 	// TODO: revise cost function, use weights depending on scene size
 	//fmt.Printf("intersections: %v cost: %v\n", cost, bvh.cost())
 	//return float64(cost * bvh.size())
-	return bvh.cost()
+	return bvh.Cost()
 }
 
 func numberOfIntersections(bvh BVH, camera *Camera) int {

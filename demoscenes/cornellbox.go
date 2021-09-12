@@ -3,7 +3,7 @@ package demoscenes
 import . "github/chschmidt99/pt/pkg/pt"
 
 // recommended: FOV: 50 AR: 4/3
-func CornellBox(ar, fov float64) (*Scene, *Camera) {
+func CornellBox(ar, fov float64) DemoScene {
 	cube := ParseFromPath("../../assets/cube.obj")
 
 	whiteMat := Diffuse{Albedo: NewColor(.73, .73, .73)}
@@ -70,5 +70,9 @@ func CornellBox(ar, fov float64) (*Scene, *Camera) {
 		Up:       NewVector3(0, 1, 0),
 	})
 
-	return scene, camera
+	return DemoScene{
+		Name:    "Cornell Box",
+		Scene:   scene,
+		Cameras: []*Camera{camera},
+	}
 }

@@ -20,7 +20,7 @@ type PhrBuilder struct {
 }
 
 func NewDefaultBuilder(primitives []tracable) PhrBuilder {
-	return NewPHRBuilder(primitives, 0.5, 6, 4, runtime.GOMAXPROCS(0))
+	return NewPHRBuilder(primitives, 0.5, 6, 2, runtime.GOMAXPROCS(0))
 }
 
 func NewPHRBuilder(primitives []tracable, alpha float64, delta int, branchingFactor int, threadCount int) PhrBuilder {
@@ -88,13 +88,11 @@ type phrJob struct {
 }
 
 func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
-	defer wg.Done()
-
 	if len(job.cut.nodes) <= 1 {
 		job.parent.addChild(job.cut.nodes[0], job.childIndex)
+		wg.Done()
 		return
 	}
-
 	cuts := make([]phrCut, 1, p.BranchingFactor)
 	cuts[0] = job.cut
 
@@ -136,6 +134,8 @@ func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 			}
 		}
 	}
+	// TODO: Synchronization issue with small scenes!
+	wg.Add(len(cuts) - 1)
 
 	// Create a new BVH branch
 	branch := newBranch(len(cuts))
@@ -144,7 +144,6 @@ func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	job.parent.addChild(branch, job.childIndex)
 
 	// Queue all new children to be processed by this or any other thread
-	wg.Add(len(cuts))
 	for i, cut := range cuts {
 		job := &phrJob{
 			depth:      job.depth + 1,
@@ -162,6 +161,7 @@ func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 	}
 }
 
+// TODO: Also set cut hard bound?
 func (p *PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
 	queue := make(chan *bvhNode, 1024)
 	cut := phrCut{
@@ -214,15 +214,7 @@ func (p *PhrBuilder) refined(cut phrCut, depth int) phrCut {
 	refinedCut := make([]*bvhNode, 0, len(cut.nodes))
 	for _, node := range cut.nodes {
 		if node.isLeaf {
-			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, depth) {
-				refinedCut = append(refinedCut, node)
-			} else {
-				for _, prim := range node.prims {
-					leaf := newLeaf([]int{prim})
-					leaf.bounding = p.primitives[prim].bounding()
-					refinedCut = append(refinedCut, leaf)
-				}
-			}
+			refinedCut = append(refinedCut, node)
 		} else {
 			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, depth) {
 				// Keep node in cut

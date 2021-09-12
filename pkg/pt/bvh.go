@@ -5,10 +5,10 @@ import (
 	"sync/atomic"
 )
 
-// TODO: Set constants
 const (
-	INTERSECTION_COST = 7  // roughly approximated cost of intersection calculation
-	TRAVERSAL_COST    = 43 // cost of traversal relative to intersection cost
+	INTERSECTION_COST = 1 // roughly approximated cost of intersection calculation
+	TRAVERSAL_COST    = 1 // cost of traversal relative to intersection cost
+	//TRAVERSAL_COST    = 6 // cost of traversal relative to intersection cost
 )
 
 type BVH struct {
@@ -37,7 +37,7 @@ func (bvh *BVH) traversalSteps(ray ray, tMin, tMax float64) int {
 	}
 }
 
-func (bvh *BVH) cost() float64 {
+func (bvh *BVH) Cost() float64 {
 	return bvh.root.cost()
 }
 
@@ -166,6 +166,7 @@ func (node *bvhNode) updateAABB(primitives []tracable) {
 	}
 }
 
+// Note: Cost differs from PHR paper, as trangle quartets are not considered a single primitive in this computation
 // Measurement of the bvh quality
 func (node *bvhNode) cost() float64 {
 	if node.isLeaf {
@@ -173,8 +174,10 @@ func (node *bvhNode) cost() float64 {
 	} else {
 		childCosts := 0.0
 		for _, child := range node.children {
-			probability := child.bounding.surface() / node.bounding.surface()
-			childCosts += probability * child.cost()
+			if node.bounding.surface() != 0 {
+				probability := child.bounding.surface() / node.bounding.surface()
+				childCosts += probability * child.cost()
+			}
 		}
 		return TRAVERSAL_COST + childCosts
 	}

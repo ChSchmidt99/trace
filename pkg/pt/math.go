@@ -5,6 +5,8 @@ import (
 	"math/rand"
 )
 
+// TODO: SIMD Matricies?
+
 type Color Vector3
 
 func NewColor(r, g, b float64) Color {

@@ -51,6 +51,19 @@ func NewNoLightRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 	}
 }
 
+func NewBenchmarkRenderer(bvh BVH, camera *Camera) *ImageRenderer {
+	return &ImageRenderer{
+		NumCPU:   runtime.GOMAXPROCS(0),
+		MaxDepth: 2,
+		Bvh:      bvh,
+		Spp:      1,
+		Camera:   camera,
+		Closest:  UnlitClosestHitShader,
+		Miss:     WhiteMissShader,
+		Verbose:  false,
+	}
+}
+
 type context struct {
 	rand  *rand.Rand
 	depth int
@@ -210,14 +223,14 @@ func SkyMissShader(renderer *ImageRenderer, c context, r ray) Color {
 type TraversalCountShader func(count int) Color
 
 func DefaultTraversalCountShader(count int) Color {
-	if count > 500 {
-		factor := float64(count) / 800
+	if count > 100 {
+		factor := float64(count) / 150
 		return NewColor(factor, 0, 0)
 	}
-	if count > 300 {
-		factor := float64(count) / 500
+	if count > 70 {
+		factor := float64(count) / 100
 		return NewColor(0, factor, 0)
 	}
-	factor := float64(count) / 300
+	factor := float64(count) / 70
 	return NewColor(0, 0, factor)
 }
