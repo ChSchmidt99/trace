@@ -30,14 +30,14 @@ func (bvh *BVH) traversalSteps(ray ray, tMin, tMax float64) int {
 			return count
 		}
 		if node.bounding.intersected(ray, tMin, hitOut.t) {
-			if !node.isLeaf {
-				stack.push(node.children...)
-				count++
-			} else {
+			if node.isLeaf {
 				for i := 0; i < len(node.prims); i++ {
 					prim := bvh.prims[node.prims[i]]
 					prim.intersected(ray, tMin, hitOut.t, &hitOut)
 				}
+			} else {
+				stack.push(node.children...)
+				count++
 			}
 		}
 	}

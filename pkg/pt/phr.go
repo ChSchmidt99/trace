@@ -20,7 +20,7 @@ type PhrBuilder struct {
 }
 
 func NewDefaultBuilder(primitives []tracable) PhrBuilder {
-	return NewPHRBuilder(primitives, 0.5, 6, 2, runtime.GOMAXPROCS(0))
+	return NewPHRBuilder(primitives, 0.55, 9, 2, runtime.GOMAXPROCS(0))
 }
 
 func NewPHRBuilder(primitives []tracable, alpha float64, delta int, branchingFactor int, threadCount int) PhrBuilder {
@@ -243,6 +243,77 @@ type phrCut struct {
 }
 
 type SplitFunction func(phrCut) (*phrCut, *phrCut)
+
+func SweepSAHalternative(cut phrCut) (*phrCut, *phrCut) {
+	sort.SliceStable(cut.nodes, func(i, j int) bool {
+		return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
+	})
+	xSplit, xCost := minCostAlternative(cut.nodes)
+
+	sort.SliceStable(cut.nodes, func(i, j int) bool {
+		return cut.nodes[i].bounding.barycenter.Y < cut.nodes[j].bounding.barycenter.Y
+	})
+	ySplit, yCost := minCostAlternative(cut.nodes)
+
+	sort.SliceStable(cut.nodes, func(i, j int) bool {
+		return cut.nodes[i].bounding.barycenter.Z < cut.nodes[j].bounding.barycenter.Z
+	})
+	zSplit, zCost := minCostAlternative(cut.nodes)
+
+	split := zSplit
+	if xCost <= yCost && xCost <= zCost {
+		split = xSplit
+		sort.SliceStable(cut.nodes, func(i, j int) bool {
+			return cut.nodes[i].bounding.barycenter.X < cut.nodes[j].bounding.barycenter.X
+		})
+	} else if yCost <= zCost && yCost <= xCost {
+		split = ySplit
+		sort.SliceStable(cut.nodes, func(i, j int) bool {
+			return cut.nodes[i].bounding.barycenter.Y < cut.nodes[j].bounding.barycenter.Y
+		})
+	}
+
+	if split == 0 {
+		return &cut, nil
+	}
+
+	return &phrCut{
+			nodes:    cut.nodes[:split],
+			bounding: enclosingSubtrees(cut.nodes[:split]),
+		}, &phrCut{
+			nodes:    cut.nodes[split:],
+			bounding: enclosingSubtrees(cut.nodes[split:]),
+		}
+
+}
+
+func minCostAlternative(sortedNodes []*bvhNode) (index int, minCost float64) {
+	SaRight := sortedNodes[len(sortedNodes)-1].bounding
+	rightCosts := make([]float64, len(sortedNodes))
+	nodeCount := 0
+	for i := len(sortedNodes) - 1; i >= 0; i-- {
+		SaRight = SaRight.add(sortedNodes[i].bounding)
+		nodeCount += sortedNodes[i].subtreeSize()
+		rightCosts[i] = SaRight.surface() * float64(nodeCount)
+	}
+
+	// Cost of not splitting
+	minCost = rightCosts[0]
+	index = 0
+
+	nodeCount = sortedNodes[0].subtreeSize()
+	SaLeft := sortedNodes[0].bounding
+	for i := 1; i < len(sortedNodes); i++ {
+		cost := rightCosts[i] + SaLeft.surface()*float64(nodeCount)
+		if cost < minCost {
+			minCost = cost
+			index = i
+		}
+		SaLeft = SaLeft.add(sortedNodes[i].bounding)
+		nodeCount += sortedNodes[i].subtreeSize()
+	}
+	return
+}
 
 // TODO: Can GC be optimized? Reuse slice
 func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {

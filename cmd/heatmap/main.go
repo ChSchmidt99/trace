@@ -18,8 +18,8 @@ func main() {
 	//demoScene := demo.Bunny(ASPECT_RATIO, FOV)
 	demoScene := demo.SanMiguel(ASPECT_RATIO, FOV)
 
-	bvh := demoScene.Scene.CompilePHR(0.5, 6, 2)
-	//bvh := demoScene.Scene.CompileLBVH()
+	//bvh := demoScene.Scene.CompilePHR(0.55, 9, 2)
+	bvh := demoScene.Scene.CompileLBVH()
 
 	renderer := NewHeatMapRenderer(bvh, demoScene.Cameras[0])
 	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)
