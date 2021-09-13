@@ -224,13 +224,9 @@ type TraversalCountShader func(count int) Color
 
 func DefaultTraversalCountShader(count int) Color {
 	if count > 100 {
-		factor := float64(count) / 150
+		factor := float64(count) / 300
 		return NewColor(factor, 0, 0)
 	}
-	if count > 70 {
-		factor := float64(count) / 100
-		return NewColor(0, factor, 0)
-	}
-	factor := float64(count) / 70
-	return NewColor(0, 0, factor)
+	factor := float64(count) / 120
+	return NewColor(0, factor, 1-factor)
 }
