@@ -5,7 +5,10 @@ import (
 	"runtime"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
+
+const MAX_CUT_SIZE = 5000
 
 type PhrBuilder struct {
 	Alpha           float64 // How quickly cut size will shrink
@@ -17,6 +20,7 @@ type PhrBuilder struct {
 	threadCount     int
 	primitives      []tracable
 	surface         float64
+	initialCutSize  int32
 }
 
 func NewDefaultBuilder(primitives []tracable) PhrBuilder {
@@ -42,9 +46,9 @@ func (p *PhrBuilder) Build() BVH {
 
 func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	p.surface = auxilaryBVH.root.bounding.surface()
+	p.initialCutSize = 0
 	// Determine initial cut
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
-
 	// Start workers
 	wg := sync.WaitGroup{}
 	p.jobs = make(chan *phrJob, p.threadCount)
@@ -192,6 +196,13 @@ func (p *PhrBuilder) processNodeInitialCut(node *bvhNode, wg *sync.WaitGroup, m 
 		wg.Done()
 	} else {
 		if node.bounding.surface() > p.Threshold(p.surface, p.Alpha, p.Delta, 0) {
+			if atomic.AddInt32(&p.initialCutSize, int32(len(node.children)-1)) >= MAX_CUT_SIZE {
+				m.Lock()
+				*cut = append(*cut, node)
+				m.Unlock()
+				wg.Done()
+				return
+			}
 			wg.Add(len(node.children) - 1)
 			for _, child := range node.children {
 				// If channel is full, process node directly to avoid deadlock
@@ -201,12 +212,12 @@ func (p *PhrBuilder) processNodeInitialCut(node *bvhNode, wg *sync.WaitGroup, m 
 					p.processNodeInitialCut(child, wg, m, queue, cut)
 				}
 			}
-			return
+		} else {
+			m.Lock()
+			*cut = append(*cut, node)
+			m.Unlock()
+			wg.Done()
 		}
-		m.Lock()
-		*cut = append(*cut, node)
-		m.Unlock()
-		wg.Done()
 	}
 }
 

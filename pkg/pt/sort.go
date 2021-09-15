@@ -7,6 +7,8 @@ import (
 	"sync/atomic"
 )
 
+// TODO: Merge file with LBVH
+
 type bucket []mortonPair
 
 type mergeJob struct {

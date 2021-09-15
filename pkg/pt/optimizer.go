@@ -1,8 +1,10 @@
 package pt
 
 import (
+	"fmt"
 	"log"
 	"math"
+	"time"
 
 	"changkun.de/x/bo"
 )
@@ -46,13 +48,17 @@ func NewBayesianOptimizer(alphaRange [2]float64, deltaRange [2]int) bayesianOpti
 // TODO: Also optimize Branching factor?
 func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branching int, threads int) (alpha float64, delta int) {
 	builder := NewPHRBuilder(aux.prims, 0, 0, branching, threads)
+	e := evaluater{
+		set: false,
+	}
 	x, _, err := op.o.RunSerial(func(m map[bo.Param]float64) float64 {
 		alpha, delta := m[op.alphaParam], m[op.deltaParam]
 		d := mapDelta(op.deltaRange, delta)
 		builder.Alpha = alpha
 		builder.Delta = d
+		start := time.Now()
 		bvh := builder.BuildFromAuxilary(aux)
-		cost := evalPHR(bvh, camera)
+		cost := e.evalPHR(bvh, camera, time.Since(start))
 		return cost
 	})
 	if err != nil {
@@ -61,26 +67,40 @@ func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branchin
 	return x[op.alphaParam], mapDelta(op.deltaRange, x[op.deltaParam])
 }
 
-func evalPHR(bvh BVH, camera *Camera) float64 {
-	//cost := numberOfIntersections(bvh, camera)
-	// TODO: revise cost function, use weights depending on scene size
-	//fmt.Printf("intersections: %v cost: %v\n", cost, bvh.cost())
-	//return float64(cost * bvh.size())
-	return bvh.Cost()
+// Stores the initial evaluation to use as a base line
+// TODO: Add weight depending on canvas size and scene complexity
+// TODO: Better metric than build time (read build complexity from params)
+type evaluater struct {
+	cost      float64
+	buildTime time.Duration
+	set       bool
 }
 
-func numberOfIntersections(bvh BVH, camera *Camera) int {
-	sum := 0
+func (e *evaluater) evalPHR(bvh BVH, camera *Camera, buildTime time.Duration) float64 {
+	if !e.set {
+		e.cost = avgRayCost(bvh, camera)
+		e.buildTime = buildTime
+		e.set = true
+		return 2
+	}
+	cost := avgRayCost(bvh, camera)
+	eval := (cost / e.cost) + (float64(buildTime) / float64(e.buildTime))
+	fmt.Printf("Build Time: %v Cost: %v Evaluation: %v\n", buildTime, cost, eval)
+	return eval
+}
+
+func avgRayCost(bvh BVH, camera *Camera) float64 {
+	costSum := 0.0
 	r := ray{}
 	for y := 0; y < EVAL_HEIGHT; y++ {
 		for x := 0; x < EVAL_WIDTH; x++ {
 			s := float64(x) / float64(EVAL_WIDTH-1)
 			t := float64(y) / float64(EVAL_HEIGHT-1)
 			camera.castRayReuse(s, t, &r)
-			sum += bvh.traversalSteps(r, 0.001, math.MaxFloat64)
+			costSum += bvh.rayCost(r, 0.001, math.MaxFloat64)
 		}
 	}
-	return sum
+	return costSum / (EVAL_HEIGHT * EVAL_WIDTH)
 }
 
 func mapDelta(deltaRange [2]int, t float64) int {
@@ -103,13 +123,16 @@ func NewGridOptimizer(alphas []float64, deltas []int) gridOptimizer {
 func (g gridOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branching int, threads int) (alpha float64, delta int) {
 	builder := NewPHRBuilder(aux.prims, 0, 0, branching, threads)
 	minCost := math.MaxFloat64
+	e := evaluater{
+		set: false,
+	}
 	for _, a := range g.Alphas {
 		for _, d := range g.Deltas {
 			builder.Alpha = a
 			builder.Delta = d
+			start := time.Now()
 			bvh := builder.BuildFromAuxilary(aux)
-			cost := evalPHR(bvh, camera)
-			//fmt.Printf("Alpha: %v Delta: %v Cost: %v\n", a, d, cost)
+			cost := e.evalPHR(bvh, camera, time.Since(start))
 			if cost < minCost {
 				minCost = cost
 				alpha = a

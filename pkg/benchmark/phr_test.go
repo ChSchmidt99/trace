@@ -95,18 +95,18 @@ func BenchmarkPHR_HQ(b *testing.B) {
 	png.Encode(f, img)
 }
 
-/*
 func BenchmarkPHR_Grid(b *testing.B) {
-	optimizer := pt.NewGridOptimizer([]float64{0.45, 0.5, 0.55, 0.65}, []int{5, 6, 7, 8, 9, 10})
-	scene := DEMO_SCENE.Scene
-	camera := DEMO_SCENE.Cameras[0]
-	name := DEMO_SCENE.Name
+	optimizer := pt.NewGridOptimizer([]float64{0.4, 0.45, 0.5, 0.55}, []int{5, 6, 7, 8})
+	scene := loadDemoScene().Scene
+	camera := loadDemoScene().Cameras[0]
+	name := loadDemoScene().Name
 
 	var bvh pt.BVH
 	b.Run("Build "+name, func(b *testing.B) {
 		primitives := scene.Tracables()
 		aux := pt.DefaultLBVH(primitives)
 		a, d := optimizer.OptimizedPHRparams(aux, camera, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		fmt.Printf("A: %v D:%v\n", a, d)
 		builder := pt.NewPHRBuilder(primitives, a, d, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
 		b.ResetTimer()
 		for i := 0; i < b.N; i++ {
@@ -123,7 +123,80 @@ func BenchmarkPHR_Grid(b *testing.B) {
 		}
 	})
 }
-*/
+
+func BenchmarkRenderTime(b *testing.B) {
+	scene := loadDemoScene().Scene
+	camera := loadDemoScene().Cameras[0]
+	primitives := scene.Tracables()
+	aux := pt.DefaultLBVH(primitives)
+	alpha := 0.55
+	b.Run("5", func(b *testing.B) {
+		builder := pt.NewPHRBuilder(primitives, alpha, 5, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		bvh := builder.BuildFromAuxilary(aux)
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+	b.Run("6", func(b *testing.B) {
+		builder := pt.NewPHRBuilder(primitives, alpha, 6, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		bvh := builder.BuildFromAuxilary(aux)
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+	b.Run("7", func(b *testing.B) {
+		builder := pt.NewPHRBuilder(primitives, alpha, 7, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		bvh := builder.BuildFromAuxilary(aux)
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+	b.Run("8", func(b *testing.B) {
+		builder := pt.NewPHRBuilder(primitives, alpha, 8, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		bvh := builder.BuildFromAuxilary(aux)
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+	b.Run("9", func(b *testing.B) {
+		builder := pt.NewPHRBuilder(primitives, alpha, 9, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		bvh := builder.BuildFromAuxilary(aux)
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+	b.Run("10", func(b *testing.B) {
+		builder := pt.NewPHRBuilder(primitives, alpha, 10, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+		bvh := builder.BuildFromAuxilary(aux)
+		renderer := pt.NewDefaultRenderer(bvh, camera)
+		renderer.Spp = 1
+		buff := pt.NewBufferAspect(RESOLUTION, AR)
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
+		}
+	})
+}
 
 func BenchmarkLBVH(b *testing.B) {
 	scene := loadDemoScene().Scene

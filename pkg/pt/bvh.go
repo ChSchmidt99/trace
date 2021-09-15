@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	INTERSECTION_COST = 1 // roughly approximated cost of intersection calculation
-	TRAVERSAL_COST    = 1 // cost of traversal relative to intersection cost
-	//TRAVERSAL_COST    = 6 // cost of traversal relative to intersection cost
+	INTERSECTION_COST = 1.0 // roughly approximated cost of intersection calculation
+	//TRAVERSAL_COST    = 1 // cost of traversal relative to intersection cost
+	TRAVERSAL_COST = 6.0 // cost of traversal relative to intersection cost
 )
 
 type BVH struct {
@@ -38,6 +38,32 @@ func (bvh *BVH) traversalSteps(ray ray, tMin, tMax float64) int {
 			} else {
 				stack.push(node.children...)
 				count++
+			}
+		}
+	}
+}
+
+func (bvh *BVH) rayCost(ray ray, tMin, tMax float64) float64 {
+	stack := bvhStack{}
+	stack.push(bvh.root)
+	hitOut := hit{}
+	hitOut.t = tMax
+	cost := 0.0
+	for {
+		node := stack.pop()
+		if node == nil {
+			return cost
+		}
+		cost += TRAVERSAL_COST
+		if node.bounding.intersected(ray, tMin, hitOut.t) {
+			if node.isLeaf {
+				for i := 0; i < len(node.prims); i++ {
+					prim := bvh.prims[node.prims[i]]
+					prim.intersected(ray, tMin, hitOut.t, &hitOut)
+				}
+				cost += INTERSECTION_COST * float64(len(node.prims))
+			} else {
+				stack.push(node.children...)
 			}
 		}
 	}
