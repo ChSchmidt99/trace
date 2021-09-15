@@ -15,8 +15,8 @@ const (
 
 func main() {
 	//demoScene := demo.CornellBox(ASPECT_RATIO, FOV)
-	demoScene := demo.Bunny(ASPECT_RATIO, FOV)
-	//demoScene := demo.SanMiguel(ASPECT_RATIO, FOV)
+	//demoScene := demo.Bunny(ASPECT_RATIO, FOV)
+	demoScene := demo.SanMiguel(ASPECT_RATIO, FOV)
 
 	bvh := demoScene.Scene.CompilePHR(0.5, 6, 2)
 	//bvh := demoScene.Scene.CompileLBVH()

@@ -16,7 +16,7 @@ type PhrBuilder struct {
 	BranchingFactor int
 	Threshold       AreaThreshold
 	Split           SplitFunction
-	jobs            chan *phrJob
+	jobs            chan phrJob
 	threadCount     int
 	primitives      []tracable
 	surface         float64
@@ -44,6 +44,48 @@ func (p *PhrBuilder) Build() BVH {
 	return p.BuildFromAuxilary(auxilaryBVH)
 }
 
+func (p *PhrBuilder) BuildWithCost(auxilaryBVH BVH) (BVH, int) {
+	p.surface = auxilaryBVH.root.bounding.surface()
+	p.initialCutSize = 0
+	var cost int32 = 0
+	// Determine initial cut
+	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
+	cost += int32(len(cut.nodes))
+	// Start workers
+	wg := sync.WaitGroup{}
+	p.jobs = make(chan phrJob, p.threadCount)
+	for i := 0; i < p.threadCount; i++ {
+		go func() {
+			for job := range p.jobs {
+				p.buildSubTreeCost(job, &wg, &cost)
+			}
+		}()
+	}
+
+	// Temporary branch as a starting point, will be discared afterwards
+	temp := newBranch(1)
+	temp.bounding = auxilaryBVH.root.bounding
+	wg.Add(1)
+
+	// Start initial job
+	p.jobs <- phrJob{
+		depth:      1,
+		cut:        cut,
+		parent:     temp,
+		childIndex: 0,
+	}
+
+	// Wait until tree is built
+	wg.Wait()
+	close(p.jobs)
+
+	temp.children[0].parent = nil
+	return BVH{
+		root:  temp.children[0],
+		prims: p.primitives,
+	}, int(cost)
+}
+
 func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	p.surface = auxilaryBVH.root.bounding.surface()
 	p.initialCutSize = 0
@@ -51,7 +93,7 @@ func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
 	// Start workers
 	wg := sync.WaitGroup{}
-	p.jobs = make(chan *phrJob, p.threadCount)
+	p.jobs = make(chan phrJob, p.threadCount)
 	for i := 0; i < p.threadCount; i++ {
 		go func() {
 			for job := range p.jobs {
@@ -66,7 +108,7 @@ func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 	wg.Add(1)
 
 	// Start initial job
-	p.jobs <- &phrJob{
+	p.jobs <- phrJob{
 		depth:      1,
 		cut:        cut,
 		parent:     temp,
@@ -91,7 +133,82 @@ type phrJob struct {
 	childIndex int
 }
 
-func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
+func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int32) {
+	if len(job.cut.nodes) <= 1 {
+		job.parent.addChild(job.cut.nodes[0], job.childIndex)
+		atomic.AddInt32(cost, 1)
+		wg.Done()
+		return
+	}
+	cuts := make([]phrCut, 1, p.BranchingFactor)
+	cuts[0] = job.cut
+
+	// Keep splitting cut until enough nodes to branch the tree are found
+	for len(cuts) < p.BranchingFactor {
+		// Find the biggest cut
+		max := 0
+		maxI := 0
+		for i, cut := range cuts {
+			if len(cut.nodes) > max {
+				max = len(cut.nodes)
+				maxI = i
+			}
+		}
+		// If the biggest cut has size = 1, no more cuts can be split => break
+		if max <= 1 {
+			break
+		}
+		// Split biggest cut
+		// TODO: Refactor?
+		left, right := p.Split(cuts[maxI])
+		if right != nil {
+			cuts[maxI] = p.refined(*left, job.depth)
+			cuts = append(cuts, p.refined(*right, job.depth))
+		} else {
+			// If cut was not split, make it a leaf node
+			leaves := make([]*bvhNode, 0)
+			for _, n := range left.nodes {
+				n.collectLeaves(&leaves)
+			}
+			prims := make([]int, 0, len(leaves))
+			for _, leaf := range leaves {
+				prims = append(prims, leaf.prims...)
+			}
+			leaf := newLeaf(prims)
+			leaf.bounding = left.bounding
+			cuts[maxI] = phrCut{
+				nodes: []*bvhNode{leaf},
+			}
+		}
+	}
+	// TODO: Synchronization issue with small scenes!
+	wg.Add(len(cuts) - 1)
+
+	// Create a new BVH branch
+	branch := newBranch(len(cuts))
+	branch.bounding = job.cut.bounding
+	job.parent.addChild(branch, job.childIndex)
+	atomic.AddInt32(cost, 1)
+
+	// Queue all new children to be processed by this or any other thread
+	for i, cut := range cuts {
+		newJob := phrJob{
+			depth:      job.depth + 1,
+			cut:        cut,
+			parent:     branch,
+			childIndex: i,
+		}
+
+		// If channel is full, directly process job
+		select {
+		case p.jobs <- newJob:
+		default:
+			p.buildSubTreeCost(newJob, wg, cost)
+		}
+	}
+}
+
+func (p *PhrBuilder) buildSubTree(job phrJob, wg *sync.WaitGroup) {
 	if len(job.cut.nodes) <= 1 {
 		job.parent.addChild(job.cut.nodes[0], job.childIndex)
 		wg.Done()
@@ -149,7 +266,7 @@ func (p *PhrBuilder) buildSubTree(job *phrJob, wg *sync.WaitGroup) {
 
 	// Queue all new children to be processed by this or any other thread
 	for i, cut := range cuts {
-		job := &phrJob{
+		job := phrJob{
 			depth:      job.depth + 1,
 			cut:        cut,
 			parent:     branch,
@@ -236,6 +353,20 @@ func (p *PhrBuilder) refined(cut phrCut, depth int) phrCut {
 			}
 		}
 	}
+
+	// TODO: Refactor, place somewhere else?
+	if len(refinedCut) == 1 {
+		leaves := make([]*bvhNode, 0)
+		refinedCut[0].collectLeaves(&leaves)
+		prims := make([]int, 0)
+		for _, leaf := range leaves {
+			prims = append(prims, leaf.prims...)
+		}
+		leaf := newLeaf(prims)
+		leaf.bounding = cut.bounding
+		refinedCut[0] = leaf
+	}
+
 	return phrCut{
 		nodes:    refinedCut,
 		bounding: cut.bounding,

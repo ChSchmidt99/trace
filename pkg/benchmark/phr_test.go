@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"os"
 	"runtime"
+	"strconv"
 	"testing"
 )
 
@@ -23,9 +24,11 @@ const (
 
 var DEMO_SCENE *demoscenes.DemoScene
 
+var result pt.BVH
+
 func loadDemoScene() demoscenes.DemoScene {
 	if DEMO_SCENE == nil {
-		demo := demoscenes.Bunny(AR, FOV)
+		demo := demoscenes.SanMiguel(AR, FOV)
 		DEMO_SCENE = &demo
 	}
 	return *DEMO_SCENE
@@ -124,78 +127,36 @@ func BenchmarkPHR_Grid(b *testing.B) {
 	})
 }
 
-func BenchmarkRenderTime(b *testing.B) {
+func BenchmarkCost(b *testing.B) {
 	scene := loadDemoScene().Scene
-	camera := loadDemoScene().Cameras[0]
 	primitives := scene.Tracables()
 	aux := pt.DefaultLBVH(primitives)
-	alpha := 0.55
-	b.Run("5", func(b *testing.B) {
-		builder := pt.NewPHRBuilder(primitives, alpha, 5, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
-		bvh := builder.BuildFromAuxilary(aux)
-		renderer := pt.NewDefaultRenderer(bvh, camera)
-		renderer.Spp = 1
-		buff := pt.NewBufferAspect(RESOLUTION, AR)
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			renderer.RenderToBuffer(buff)
+	alpha := 0.65
+	for i := 5; i < 11; i++ {
+		b.Run("Cost "+strconv.Itoa(i), func(b *testing.B) {
+			builder := pt.NewPHRBuilder(primitives, alpha, i, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+			var bvh pt.BVH
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				bvh = builder.BuildFromAuxilary(aux)
+			}
+			result = bvh
+		})
+	}
+}
+
+func TestCostList(t *testing.T) {
+	scene := loadDemoScene().Scene
+	primitives := scene.Tracables()
+	aux := pt.DefaultLBVH(primitives)
+	for alpha := 0.4; alpha <= 0.55; alpha += 0.05 {
+		for delta := 5; delta <= 10; delta++ {
+			builder := pt.NewPHRBuilder(primitives, alpha, delta, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+			tree, cost := builder.BuildWithCost(aux)
+			tree2 := builder.BuildFromAuxilary(aux)
+			fmt.Printf("Alpha: %v Delta: %v Cost: %v Tree Size: %v %v\n", alpha, delta, cost, tree.Size(), tree2.Size())
 		}
-	})
-	b.Run("6", func(b *testing.B) {
-		builder := pt.NewPHRBuilder(primitives, alpha, 6, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
-		bvh := builder.BuildFromAuxilary(aux)
-		renderer := pt.NewDefaultRenderer(bvh, camera)
-		renderer.Spp = 1
-		buff := pt.NewBufferAspect(RESOLUTION, AR)
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			renderer.RenderToBuffer(buff)
-		}
-	})
-	b.Run("7", func(b *testing.B) {
-		builder := pt.NewPHRBuilder(primitives, alpha, 7, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
-		bvh := builder.BuildFromAuxilary(aux)
-		renderer := pt.NewDefaultRenderer(bvh, camera)
-		renderer.Spp = 1
-		buff := pt.NewBufferAspect(RESOLUTION, AR)
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			renderer.RenderToBuffer(buff)
-		}
-	})
-	b.Run("8", func(b *testing.B) {
-		builder := pt.NewPHRBuilder(primitives, alpha, 8, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
-		bvh := builder.BuildFromAuxilary(aux)
-		renderer := pt.NewDefaultRenderer(bvh, camera)
-		renderer.Spp = 1
-		buff := pt.NewBufferAspect(RESOLUTION, AR)
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			renderer.RenderToBuffer(buff)
-		}
-	})
-	b.Run("9", func(b *testing.B) {
-		builder := pt.NewPHRBuilder(primitives, alpha, 9, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
-		bvh := builder.BuildFromAuxilary(aux)
-		renderer := pt.NewDefaultRenderer(bvh, camera)
-		renderer.Spp = 1
-		buff := pt.NewBufferAspect(RESOLUTION, AR)
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			renderer.RenderToBuffer(buff)
-		}
-	})
-	b.Run("10", func(b *testing.B) {
-		builder := pt.NewPHRBuilder(primitives, alpha, 10, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
-		bvh := builder.BuildFromAuxilary(aux)
-		renderer := pt.NewDefaultRenderer(bvh, camera)
-		renderer.Spp = 1
-		buff := pt.NewBufferAspect(RESOLUTION, AR)
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
-			renderer.RenderToBuffer(buff)
-		}
-	})
+	}
 }
 
 func BenchmarkLBVH(b *testing.B) {

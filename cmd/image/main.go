@@ -16,14 +16,14 @@ const (
 func main() {
 	//scene, camera := demo.CornellBox(ASPECT_RATIO, FOV)
 	//demoScene := demo.Bunny(ASPECT_RATIO, FOV)
-	//demoScene := demo.SanMiguel(ASPECT_RATIO, FOV)
-	demoScene := demo.Hairball(ASPECT_RATIO, FOV)
+	demoScene := demo.SanMiguel(ASPECT_RATIO, FOV)
+	//demoScene := demo.Hairball(ASPECT_RATIO, FOV)
 
-	bvh := demoScene.Scene.Compile()
+	bvh := demoScene.Scene.CompilePHR(0.5, 6, 2)
 	renderer := NewDefaultRenderer(bvh, demoScene.Cameras[0])
 	renderer.Closest = UnlitClosestHitShader
 	renderer.Miss = SkyMissShader
-	renderer.Spp = 20
+	renderer.Spp = 30
 	renderer.Verbose = true
 
 	buff := NewBufferAspect(RESOLUTION, ASPECT_RATIO)

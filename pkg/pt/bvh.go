@@ -1,6 +1,7 @@
 package pt
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 )
@@ -71,6 +72,30 @@ func (bvh *BVH) rayCost(ray ray, tMin, tMax float64) float64 {
 
 func (bvh *BVH) Cost() float64 {
 	return bvh.root.cost()
+}
+
+func (bvh *BVH) Size() int {
+	return bvh.root.subtreeSize()
+}
+
+func (bvh *BVH) Print() {
+	stack := bvhStack{}
+	stack.push(bvh.root)
+	for {
+		node := stack.pop()
+		if node == nil {
+			return
+		}
+
+		if node.isLeaf {
+			fmt.Printf("Leaf with %v prims\n", len(node.prims))
+		} else {
+			fmt.Printf("Branch with %v children.\n", len(node.children))
+			stack.push(node.children...)
+		}
+
+	}
+
 }
 
 func (bvh *BVH) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
@@ -148,6 +173,7 @@ func newBranch(children int) *bvhNode {
 	return &bvhNode{
 		children: make([]*bvhNode, children),
 		isLeaf:   false,
+		size:     0,
 	}
 }
 
