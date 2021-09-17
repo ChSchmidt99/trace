@@ -35,9 +35,8 @@ func (s *Scene) CompilePHR(alpha, delta float64, branchingFactor int) BVH {
 	return builder.Build()
 }
 
-// TODO: Hide Tracables?
-func (s *Scene) Tracables() []tracable {
-	return s.root.collectTracables(IdentityMatrix())
+func (s *Scene) UntransformedTracables() []tracable {
+	return s.root.collectTracablesRaw()
 }
 
 type SceneNode struct {
@@ -81,8 +80,21 @@ func (n *SceneNode) transform(t Matrix4) {
 	n.transformation = n.transformation.MultiplyMatrix(t)
 }
 
+// Returns all Tracables without transforming
+func (n *SceneNode) collectTracablesRaw() []tracable {
+	out := make([]tracable, 0)
+	if n.mesh != nil {
+		out = append(out, n.mesh.raw()...)
+	}
+	for _, child := range n.children {
+		out = append(out, child.collectTracablesRaw()...)
+	}
+	return out
+}
+
 // TODO: Make Multi Thread
 // TODO: Check if zero alloc with accumulator is more efficient
+// Returns all Tracables transformed by t
 func (n *SceneNode) collectTracables(t Matrix4) []tracable {
 	t = n.transformation.MultiplyMatrix(t)
 	out := make([]tracable, 0)
@@ -110,6 +122,17 @@ func NewMesh(geometry Geometry, mat Material) *Mesh {
 		geometry:       geometry,
 		material:       mat,
 	}
+}
+
+func (m Mesh) raw() []tracable {
+	tracables := make([]tracable, len(m.geometry))
+	for i, prim := range m.geometry {
+		tracables[i] = tracable{
+			prim: prim,
+			mat:  m.material,
+		}
+	}
+	return tracables
 }
 
 func (m Mesh) Transformed(t Matrix4) []tracable {

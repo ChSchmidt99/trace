@@ -34,7 +34,7 @@ func BenchmarkScene(b *testing.B) {
 
 	// Benchmark BVH construction speed
 	b.Run("Build "+demoScene.Name, func(b *testing.B) {
-		primitives := demoScene.Scene.Tracables()
+		primitives := demoScene.Scene.UntransformedTracables()
 		aux := pt.DefaultLBVH(primitives)
 		builder := pt.NewPHRBuilder(primitives, alpha, delta, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
 		b.ResetTimer()

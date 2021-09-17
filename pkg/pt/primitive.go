@@ -204,7 +204,6 @@ func (tri *Triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool 
 }
 
 // Wrapper for pimitive including a material
-// TODO: Only store material index into array?
 type tracable struct {
 	prim primitive
 	mat  Material

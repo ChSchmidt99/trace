@@ -22,7 +22,6 @@ type ImageRenderer struct {
 	Closest  ClosestHitShader
 	Miss     MissShader
 	Verbose  bool
-	// TODO: Add incremental saving to image
 }
 
 func NewDefaultRenderer(bvh BVH, camera *Camera) *ImageRenderer {
@@ -100,10 +99,8 @@ func (r *ImageRenderer) RenderToBuffer(buff Buffer) {
 			rand: rand.New(rand.NewSource(time.Now().UnixNano())),
 		}, width, height)
 	}
-	// TODO: Check if doing spp per pixel instead of per image is better
 	for i := 0; i < r.Spp; i++ {
 		for y := 0; y < height; y++ {
-			// TODO: Check if not using worker pattern and instead rendering calculated lines is faster
 			jobs <- y
 		}
 		r.log("Finished pass %v\n", i)
@@ -111,6 +108,8 @@ func (r *ImageRenderer) RenderToBuffer(buff Buffer) {
 	close(jobs)
 	wg.Wait()
 }
+
+// TODO: Add Render function for image (RenderIncremental) that saves to image in interval and Renderer that finishes each pixel with all spp at once
 
 func (r *ImageRenderer) log(message string, a ...interface{}) {
 	if r.Verbose {
