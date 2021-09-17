@@ -1,7 +1,6 @@
 package benchmark
 
 import (
-	"fmt"
 	"github/chschmidt99/pt/pkg/demoscenes"
 	"github/chschmidt99/pt/pkg/pt"
 	"image/png"
@@ -23,9 +22,9 @@ const (
 	BRANCHING_FACTOR = 2
 )
 
-//var demoScene = demoscenes.Bunny(AR, FOV)
+var demoScene = demoscenes.Bunny(AR, FOV)
 
-var demoScene = demoscenes.SanMiguel(AR, FOV)
+//var demoScene = demoscenes.SanMiguel(AR, FOV)
 
 var alpha = PHR_FAST_ALPHA
 var delta = PHR_FAST_DELTA
@@ -65,6 +64,7 @@ func BenchmarkScene(b *testing.B) {
 	}
 }
 
+/*
 func TestGridSearch(t *testing.T) {
 	optimizer := pt.NewDefaultGridOptimizer(FRAME_SIZE, FRAME_SIZE)
 	primitives := demoScene.Scene.Tracables()
@@ -72,3 +72,13 @@ func TestGridSearch(t *testing.T) {
 	a, d := optimizer.OptimizedPHRparams(aux, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
 	fmt.Printf("Alpha: %v Delta: %v\n", a, d)
 }
+
+
+func TestBayOp(t *testing.T) {
+	optimizer := pt.NewDefaultBayesianOptimizer(FRAME_SIZE, FRAME_SIZE)
+	primitives := demoScene.Scene.Tracables()
+	aux := pt.DefaultLBVH(primitives)
+	a, d := optimizer.OptimizedPHRparams(aux, BRANCHING_FACTOR, runtime.GOMAXPROCS(0))
+	fmt.Printf("Alpha: %v Delta: %v\n", a, d)
+}
+*/

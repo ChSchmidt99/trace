@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added optional unlit renderer
 - Implemented parallel bucket sort
 - Optimizer that uses Grid Search and Bayesian Optimization to optimize PHR parameters 
-- BVH cost  
+- BVH cost
 ### Changed 
 - Fixed bug in enclosing functions
 - Parallelized PHR find initial Cut

@@ -1,6 +1,11 @@
 package pt
 
-import "math"
+import (
+	"log"
+	"math"
+
+	"changkun.de/x/bo"
+)
 
 // TODO: Reevaluate these numbers
 const (
@@ -18,11 +23,11 @@ type gridOptimizer struct {
 	pixels int
 }
 
-func NewDefaultGridOptimizer(frameWidth int, frameHeight int) gridOptimizer {
+func NewDefaultGridOptimizer(frameWidth, frameHeight int) gridOptimizer {
 	return NewGridOptimizer([]float64{0.4, 0.45, 0.5}, []float64{6, 7, 8, 9}, frameWidth, frameHeight)
 }
 
-func NewGridOptimizer(alphas []float64, deltas []float64, frameWidth int, frameHeight int) gridOptimizer {
+func NewGridOptimizer(alphas []float64, deltas []float64, frameWidth, frameHeight int) gridOptimizer {
 	return gridOptimizer{
 		Alphas: alphas,
 		Deltas: deltas,
@@ -89,56 +94,60 @@ func evalPHR(SAHcost, maxSAHcost float64, buildCost int, maxBuildCost int, omega
 	return (float64(buildCost) / float64(maxBuildCost)) + omega*(SAHcost/maxSAHcost)
 }
 
-/*
-
 type bayesianOptimizer struct {
 	alphaParam bo.UniformParam
 	deltaParam bo.UniformParam
-	deltaRange [2]int
+	alphaRange [2]float64
+	deltaRange [2]float64
 	o          *bo.Optimizer
+	pixels     int
 }
 
-func NewBayesianOptimizer(alphaRange [2]float64, deltaRange [2]int) bayesianOptimizer {
+func NewDefaultBayesianOptimizer(frameWidth, frameHeight int) bayesianOptimizer {
+	alphaRange := [2]float64{0.4, 0.5}
+	deltaRange := [2]float64{6, 9}
+	return NewBayesianOptimizer(alphaRange, deltaRange, frameWidth, frameHeight)
+}
+
+func NewBayesianOptimizer(alphaRange [2]float64, deltaRange [2]float64, frameWidth, frameHeight int) bayesianOptimizer {
 	alpha := bo.UniformParam{
 		Min: alphaRange[0],
 		Max: alphaRange[1],
 	}
 	delta := bo.UniformParam{
-		Min: 0,
-		Max: 1,
+		Min: deltaRange[0],
+		Max: deltaRange[1],
 	}
 	o := bo.NewOptimizer([]bo.Param{alpha, delta})
 	return bayesianOptimizer{
 		alphaParam: alpha,
 		deltaParam: delta,
-		deltaRange: deltaRange,
 		o:          o,
+		pixels:     frameWidth * frameHeight,
 	}
 }
 
-func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branching int, threads int) (alpha float64, delta float64) {
-	builder := NewPHRBuilder(aux.prims, 0, 0, branching, threads)
-	e := evaluater{
-		set: false,
-	}
+func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, branching int, threads int) (alpha float64, delta float64) {
+
+	builder := NewPHRBuilder(aux.prims, op.alphaRange[0], op.deltaRange[0], branching, threads)
+	bvh := builder.BuildFromAuxilary(aux)
+	maxSAHcost := bvh.Cost()
+
+	builder.Alpha = op.alphaRange[1]
+	builder.Delta = op.deltaRange[1]
+	_, maxBuildCost := builder.BuildWithCost(aux)
+
+	omega := omega(len(aux.prims), op.pixels)
 	x, _, err := op.o.RunSerial(func(m map[bo.Param]float64) float64 {
 		alpha, delta := m[op.alphaParam], m[op.deltaParam]
-		d := mapDelta(op.deltaRange, delta)
 		builder.Alpha = alpha
-		builder.Delta = d
-		start := time.Now()
-		bvh := builder.BuildFromAuxilary(aux)
-		cost := e.evalPHR(bvh, camera, time.Since(start))
+		builder.Delta = delta
+		bvh, buildCost := builder.BuildWithCost(aux)
+		cost := evalPHR(bvh.Cost(), maxSAHcost, buildCost, maxBuildCost, omega)
 		return cost
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
-	return x[op.alphaParam], mapDelta(op.deltaRange, x[op.deltaParam])
+	return x[op.alphaParam], x[op.deltaParam]
 }
-
-func mapDelta(deltaRange [2]int, t float64) int {
-	abs := deltaRange[1] - deltaRange[0]
-	return deltaRange[0] + int(float64(abs)*t)
-}
-*/
