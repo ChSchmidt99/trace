@@ -1,7 +1,7 @@
 package main
 
 import (
-	demo "github/chschmidt99/pt/demoscenes"
+	demo "github/chschmidt99/pt/pkg/demoscenes"
 	. "github/chschmidt99/pt/pkg/pt"
 	"image/png"
 	"os"

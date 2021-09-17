@@ -8,7 +8,7 @@ import (
 
 const (
 	INTERSECTION_COST = 1.0 // roughly approximated cost of intersection calculation
-	//TRAVERSAL_COST    = 1 // cost of traversal relative to intersection cost
+	//TRAVERSAL_COST    = 1.0 // cost of traversal relative to intersection cost
 	TRAVERSAL_COST = 6.0 // cost of traversal relative to intersection cost
 )
 
@@ -70,6 +70,7 @@ func (bvh *BVH) rayCost(ray ray, tMin, tMax float64) float64 {
 	}
 }
 
+// TODO: Use non recurrence function?
 func (bvh *BVH) Cost() float64 {
 	return bvh.root.cost()
 }

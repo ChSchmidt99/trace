@@ -136,7 +136,6 @@ type phrJob struct {
 func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int32) {
 	if len(job.cut.nodes) <= 1 {
 		job.parent.addChild(job.cut.nodes[0], job.childIndex)
-		atomic.AddInt32(cost, 1)
 		wg.Done()
 		return
 	}
@@ -160,6 +159,8 @@ func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int3
 		}
 		// Split biggest cut
 		// TODO: Refactor?
+		atomic.AddInt32(cost, 1)
+
 		left, right := p.Split(cuts[maxI])
 		if right != nil {
 			cuts[maxI] = p.refined(*left, job.depth)
@@ -188,7 +189,6 @@ func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int3
 	branch := newBranch(len(cuts))
 	branch.bounding = job.cut.bounding
 	job.parent.addChild(branch, job.childIndex)
-	atomic.AddInt32(cost, 1)
 
 	// Queue all new children to be processed by this or any other thread
 	for i, cut := range cuts {

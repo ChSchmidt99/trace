@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	EVAL_WIDTH  = 128
-	EVAL_HEIGHT = 72
+	EVAL_WIDTH  = 256
+	EVAL_HEIGHT = 144
 	//EVAL_WIDTH  = 256
 	//EVAL_HEIGHT = 144
 )
@@ -78,18 +78,19 @@ type evaluater struct {
 
 func (e *evaluater) evalPHR(bvh BVH, camera *Camera, buildTime time.Duration) float64 {
 	if !e.set {
-		e.cost = avgRayCost(bvh, camera)
+		e.cost = AvgRayCost(bvh, camera)
 		e.buildTime = buildTime
 		e.set = true
 		return 2
 	}
-	cost := avgRayCost(bvh, camera)
+	cost := AvgRayCost(bvh, camera)
 	eval := (cost / e.cost) + (float64(buildTime) / float64(e.buildTime))
 	fmt.Printf("Build Time: %v Cost: %v Evaluation: %v\n", buildTime, cost, eval)
 	return eval
 }
 
-func avgRayCost(bvh BVH, camera *Camera) float64 {
+// TODO: Make private
+func AvgRayCost(bvh BVH, camera *Camera) float64 {
 	costSum := 0.0
 	r := ray{}
 	for y := 0; y < EVAL_HEIGHT; y++ {
@@ -100,7 +101,7 @@ func avgRayCost(bvh BVH, camera *Camera) float64 {
 			costSum += bvh.rayCost(r, 0.001, math.MaxFloat64)
 		}
 	}
-	return costSum / (EVAL_HEIGHT * EVAL_WIDTH)
+	return costSum
 }
 
 func mapDelta(deltaRange [2]int, t float64) int {
