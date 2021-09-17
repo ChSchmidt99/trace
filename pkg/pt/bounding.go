@@ -33,14 +33,6 @@ func enclosingSlice(indeces []int, primitives []tracable) aabb {
 	return enclosing
 }
 
-func enclosingSubtrees(nodes []*bvhNode) aabb {
-	enclosing := nodes[0].bounding
-	for i := 1; i < len(nodes); i++ {
-		enclosing = enclosing.add(nodes[i].bounding)
-	}
-	return enclosing
-}
-
 func (a *aabb) update() {
 	min := a.bounds[0]
 	max := a.bounds[1]

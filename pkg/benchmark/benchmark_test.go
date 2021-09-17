@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	AR               = 1.0
-	FOV              = 50.0
-	FRAME_SIZE       = 512
+	AR         = 1.0
+	FOV        = 50.0
+	FRAME_SIZE = 256
+	//FRAME_SIZE       = 512
 	PHR_FAST_ALPHA   = 0.5
 	PHR_FAST_DELTA   = 6
 	PHR_HQ_ALPHA     = 0.55
