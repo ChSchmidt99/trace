@@ -12,7 +12,7 @@ import (
 
 const (
 	AR         = 1.0
-	FOV        = 50.0
+	FOV        = 60.0
 	FRAME_SIZE = 256
 	//FRAME_SIZE       = 512
 	PHR_FAST_ALPHA   = 0.5
@@ -22,7 +22,7 @@ const (
 	BRANCHING_FACTOR = 2
 )
 
-var demoScene = demoscenes.Bunny(AR, FOV)
+var demoScene = demoscenes.Bunny()
 
 //var demoScene = demoscenes.SanMiguel(AR, FOV)
 
@@ -44,16 +44,17 @@ func BenchmarkScene(b *testing.B) {
 	})
 
 	// Benchmark Trace speed for all view points
-	buff := pt.NewBufferAspect(FRAME_SIZE, AR)
-	for i, camera := range demoScene.Cameras {
+	buff := pt.NewFrameBufferAR(FRAME_SIZE, AR)
+	camera := pt.NewDefaultCamera(AR, FOV)
+	renderer := pt.NewBenchmarkRenderer(bvh, camera)
+	for i, view := range demoScene.ViewPoints {
 		b.Run("Render view "+strconv.Itoa(i), func(b *testing.B) {
-			renderer := pt.NewBenchmarkRenderer(bvh, camera)
+			camera.SetTransformation(view)
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				renderer.RenderToBuffer(buff)
 			}
 		})
-
 		// Create image of render for validation
 		img := buff.ToImage()
 		f, err := os.Create(demoScene.Name + " " + strconv.Itoa(i) + ".png")

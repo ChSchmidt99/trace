@@ -9,15 +9,17 @@ func Hairball(ar, fov float64) DemoScene {
 	scene := NewScene()
 	scene.Add(root)
 
-	camera := NewCamera(ar, fov, CameraTransformation{
-		LookFrom: NewVector3(7, 7, 7),
-		LookAt:   NewVector3(0, 0, 0),
-		Up:       NewVector3(0, 1, 0),
-	})
+	views := []CameraTransformation{
+		{
+			LookFrom: NewVector3(7, 7, 7),
+			LookAt:   NewVector3(0, 0, 0),
+			Up:       NewVector3(0, 1, 0),
+		},
+	}
 
 	return DemoScene{
-		Name:    "Hairball",
-		Scene:   scene,
-		Cameras: []*Camera{camera},
+		Name:       "Hairball",
+		Scene:      scene,
+		ViewPoints: views,
 	}
 }

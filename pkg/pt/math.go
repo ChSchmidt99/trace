@@ -1,6 +1,7 @@
 package pt
 
 import (
+	"image/color"
 	"math"
 	"math/rand"
 )
@@ -13,6 +14,14 @@ func NewColor(r, g, b float64) Color {
 
 func NewColor255(r, g, b int) Color {
 	return Color{float64(r) / 255.0, float64(g) / 255.0, float64(b) / 255.0}
+}
+
+// Convert to image color and also Gamma correct for gamma=2.0
+func (c Color) goColor() color.Color {
+	r := math.Sqrt(c.X)
+	g := math.Sqrt(c.Y)
+	b := math.Sqrt(c.Z)
+	return color.RGBA{R: uint8(Clamp(r, 0.0, 1.0) * 255), G: uint8(Clamp(g, 0.0, 1.0) * 255), B: uint8(Clamp(b, 0.0, 1.0) * 255), A: 255}
 }
 
 func (c1 Color) Blend(c2 Color) Color {

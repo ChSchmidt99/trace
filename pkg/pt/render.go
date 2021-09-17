@@ -21,6 +21,7 @@ type ImageRenderer struct {
 	Camera   *Camera
 	Closest  ClosestHitShader
 	Miss     MissShader
+	Sampling Sampling
 	Verbose  bool
 }
 
@@ -33,6 +34,7 @@ func NewDefaultRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 		Camera:   camera,
 		Closest:  DefaultClosestHitShader,
 		Miss:     DefaultMissShader,
+		Sampling: RandomSampling,
 		Verbose:  false,
 	}
 }
@@ -46,6 +48,7 @@ func NewNoLightRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 		Camera:   camera,
 		Closest:  UnlitClosestHitShader,
 		Miss:     WhiteMissShader,
+		Sampling: RandomSampling,
 		Verbose:  false,
 	}
 }
@@ -59,6 +62,7 @@ func NewBenchmarkRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 		Camera:   camera,
 		Closest:  UnlitClosestHitShader,
 		Miss:     WhiteMissShader,
+		Sampling: RandomSampling,
 		Verbose:  false,
 	}
 }
@@ -78,14 +82,12 @@ func (r *ImageRenderer) RenderToBuffer(buff Buffer) {
 	for i := 0; i < r.NumCPU; i++ {
 		go func(c context, w, h int) {
 			ray := ray{
-				// ATTENTION! When camera is moved, this origin needs to be changed too!
 				origin: r.Camera.orientation.origin,
 			}
 			hit := hit{}
 			for y := range jobs {
 				for x := 0; x < w; x++ {
-					u := (float64(x) + c.rand.Float64()) / float64(w-1)
-					v := (float64(y) + c.rand.Float64()) / float64(h-1)
+					u, v := r.Sampling(c, x, y, w, h)
 					r.Camera.castRayReuse(u, v, &ray)
 					if r.Bvh.intersected(ray, 0.001, math.Inf(1), &hit) {
 						buff.addSample(x, y, r.Closest(r, c, ray, &hit))
@@ -142,7 +144,6 @@ func (r *HeatMapRenderer) RenderToBuffer(buff Buffer) {
 	for i := 0; i < r.NumCPU; i++ {
 		go func(c context, w, h int) {
 			ray := ray{
-				// ATTENTION! When camera is moved, this origin needs to be changed too!
 				origin: r.Camera.orientation.origin,
 			}
 			for y := range jobs {
@@ -164,6 +165,14 @@ func (r *HeatMapRenderer) RenderToBuffer(buff Buffer) {
 	}
 	close(jobs)
 	wg.Wait()
+}
+
+type Sampling func(c context, x, y, w, h int) (u, v float64)
+
+func RandomSampling(c context, x, y, w, h int) (u, v float64) {
+	u = (float64(x) + c.rand.Float64()) / float64(w-1)
+	v = (float64(y) + c.rand.Float64()) / float64(h-1)
+	return
 }
 
 type ClosestHitShader func(*ImageRenderer, context, ray, *hit) Color

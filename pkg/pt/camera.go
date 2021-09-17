@@ -10,7 +10,7 @@ type CameraTransformation struct {
 	Up       Vector3
 }
 
-type CameraOrientation struct {
+type orientation struct {
 	origin Vector3
 	up     Vector3
 	w      Vector3
@@ -18,21 +18,21 @@ type CameraOrientation struct {
 	v      Vector3
 }
 
-func NewOrientation(lookFrom Vector3, lookAt Vector3, up Vector3) CameraOrientation {
-	w := lookFrom.Sub(lookAt).Unit()
-	u := up.Cross(w).Unit()
+func newOrientation(t CameraTransformation) orientation {
+	w := t.LookFrom.Sub(t.LookAt).Unit()
+	u := t.Up.Cross(w).Unit()
 	v := w.Cross(u)
-	return CameraOrientation{
-		origin: lookFrom,
-		w:      lookFrom.Sub(lookAt).Unit(),
-		up:     up,
+	return orientation{
+		origin: t.LookFrom,
+		w:      t.LookFrom.Sub(t.LookAt).Unit(),
+		up:     t.Up,
 		u:      u,
 		v:      v,
 	}
 }
 
 type Camera struct {
-	orientation CameraOrientation
+	orientation orientation
 
 	viewportWidth  float64
 	viewportHeight float64
@@ -42,15 +42,27 @@ type Camera struct {
 	vertical        Vector3
 }
 
+func NewDefaultCamera(aspectRatio float64, fov float64) *Camera {
+	return NewCamera(aspectRatio, fov, CameraTransformation{
+		LookFrom: NewVector3(0, 0, 0),
+		LookAt:   NewVector3(1, 0, 0),
+		Up:       NewVector3(0, 1, 0),
+	})
+}
+
 func NewCamera(aspectRatio float64, fov float64, transform CameraTransformation) *Camera {
 	cam := new(Camera)
-	cam.orientation = NewOrientation(transform.LookFrom, transform.LookAt, transform.Up)
 	cam.viewportHeight = 2.0 * math.Tan(DegreesToRadians(fov)/2)
 	cam.viewportWidth = aspectRatio * cam.viewportHeight
-	cam.horizontal = cam.orientation.u.Mul(cam.viewportWidth)
-	cam.vertical = cam.orientation.v.Mul(cam.viewportHeight)
-	cam.lowerLeftCorner = cam.orientation.origin.Sub(cam.horizontal.Mul(0.5)).Sub(cam.vertical.Mul(0.5)).Sub(cam.orientation.w)
+	cam.SetTransformation(transform)
 	return cam
+}
+
+func (c *Camera) SetTransformation(transformation CameraTransformation) {
+	c.orientation = newOrientation(transformation)
+	c.horizontal = c.orientation.u.Mul(c.viewportWidth)
+	c.vertical = c.orientation.v.Mul(c.viewportHeight)
+	c.lowerLeftCorner = c.orientation.origin.Sub(c.horizontal.Mul(0.5)).Sub(c.vertical.Mul(0.5)).Sub(c.orientation.w)
 }
 
 // Cast ray in new direction, while keeping origin the same
