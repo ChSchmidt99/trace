@@ -44,39 +44,9 @@ func (bvh *BVH) traversalSteps(ray ray, tMin, tMax float64) int {
 	}
 }
 
-func (bvh *BVH) rayCost(ray ray, tMin, tMax float64) float64 {
-	stack := bvhStack{}
-	stack.push(bvh.root)
-	hitOut := hit{}
-	hitOut.t = tMax
-	cost := 0.0
-	for {
-		node := stack.pop()
-		if node == nil {
-			return cost
-		}
-		cost += TRAVERSAL_COST
-		if node.bounding.intersected(ray, tMin, hitOut.t) {
-			if node.isLeaf {
-				for i := 0; i < len(node.prims); i++ {
-					prim := bvh.prims[node.prims[i]]
-					prim.intersected(ray, tMin, hitOut.t, &hitOut)
-				}
-				cost += INTERSECTION_COST * float64(len(node.prims))
-			} else {
-				stack.push(node.children...)
-			}
-		}
-	}
-}
-
 // TODO: Use non recurrence function?
 func (bvh *BVH) Cost() float64 {
 	return bvh.root.cost()
-}
-
-func (bvh *BVH) Size() int {
-	return bvh.root.subtreeSize()
 }
 
 func (bvh *BVH) Print() {
@@ -100,6 +70,11 @@ func (bvh *BVH) Print() {
 }
 
 func (bvh *BVH) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
+	hitOut.t = tMax
+	return bvh.root.intersected(bvh.prims, ray, tMin, tMax, hitOut)
+}
+
+func (bvh *BVH) intersectedStack(ray ray, tMin, tMax float64, hitOut *hit) bool {
 	stack := bvhStack{}
 	stack.push(bvh.root)
 	didHit := false
@@ -148,10 +123,6 @@ func (bvh *BVH) storeLeaves() {
 	bvh.root.collectLeaves(&bvh.leaves)
 }
 
-func (bvh *BVH) size() int {
-	return bvh.root.subtreeSize()
-}
-
 type bvhNode struct {
 	parent       *bvhNode
 	prims        []int
@@ -160,6 +131,28 @@ type bvhNode struct {
 	childAABBset uint32 // used as atomic counter when updating AABB
 	isLeaf       bool
 	size         int
+}
+
+func (node *bvhNode) intersected(prims []tracable, ray ray, tMin, tMax float64, hitOut *hit) bool {
+	if !node.bounding.intersected(ray, tMin, tMax) {
+		return false
+	}
+	didHit := false
+	if node.isLeaf {
+		for i := 0; i < len(node.prims); i++ {
+			prim := prims[node.prims[i]]
+			if prim.intersected(ray, tMin, hitOut.t, hitOut) {
+				didHit = true
+			}
+		}
+		return didHit
+	}
+	for _, child := range node.children {
+		if child.intersected(prims, ray, tMin, hitOut.t, hitOut) {
+			didHit = true
+		}
+	}
+	return didHit
 }
 
 func newLeaf(prims []int) *bvhNode {

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Atomic counter for updateAABB
 - Incrementally compute SAH
 - Morton code generation now without table
+- Replaced stack for BVH traversal with recursive function call
 
 ## [0.0.3] - 2021-08-12
 ### Added
