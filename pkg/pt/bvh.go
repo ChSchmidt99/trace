@@ -8,8 +8,7 @@ import (
 
 const (
 	INTERSECTION_COST = 1.0 // roughly approximated cost of intersection calculation
-	//TRAVERSAL_COST    = 1.0 // cost of traversal relative to intersection cost
-	TRAVERSAL_COST = 6.0 // cost of traversal relative to intersection cost
+	TRAVERSAL_COST    = 2.0 // cost of traversal relative to intersection cost
 )
 
 type BVH struct {
@@ -44,7 +43,6 @@ func (bvh *BVH) traversalSteps(ray ray, tMin, tMax float64) int {
 	}
 }
 
-// TODO: Use non recurrence function?
 func (bvh *BVH) Cost() float64 {
 	return bvh.root.cost()
 }
@@ -133,28 +131,6 @@ type bvhNode struct {
 	size         int
 }
 
-func (node *bvhNode) intersected(prims []tracable, ray ray, tMin, tMax float64, hitOut *hit) bool {
-	if !node.bounding.intersected(ray, tMin, tMax) {
-		return false
-	}
-	didHit := false
-	if node.isLeaf {
-		for i := 0; i < len(node.prims); i++ {
-			prim := prims[node.prims[i]]
-			if prim.intersected(ray, tMin, hitOut.t, hitOut) {
-				didHit = true
-			}
-		}
-		return didHit
-	}
-	for _, child := range node.children {
-		if child.intersected(prims, ray, tMin, hitOut.t, hitOut) {
-			didHit = true
-		}
-	}
-	return didHit
-}
-
 func newLeaf(prims []int) *bvhNode {
 	return &bvhNode{
 		prims:  prims,
@@ -196,6 +172,28 @@ func (node *bvhNode) collectLeaves(acc *[]*bvhNode) {
 	}
 }
 
+func (node *bvhNode) intersected(prims []tracable, ray ray, tMin, tMax float64, hitOut *hit) bool {
+	if !node.bounding.intersected(ray, tMin, tMax) {
+		return false
+	}
+	didHit := false
+	if node.isLeaf {
+		for i := 0; i < len(node.prims); i++ {
+			prim := prims[node.prims[i]]
+			if prim.intersected(ray, tMin, hitOut.t, hitOut) {
+				didHit = true
+			}
+		}
+	} else {
+		for _, child := range node.children {
+			if child.intersected(prims, ray, tMin, hitOut.t, hitOut) {
+				didHit = true
+			}
+		}
+	}
+	return didHit
+}
+
 func (node *bvhNode) updateAABB(primitives []tracable) {
 	if node.isLeaf {
 		node.bounding = enclosingSlice(node.prims, primitives)
@@ -218,7 +216,7 @@ func (node *bvhNode) updateAABB(primitives []tracable) {
 	}
 }
 
-// Note: Cost differs from PHR paper, as trangle quartets are not considered a single primitive in this computation
+// Note: Cost differs from the PHR paper, as trangle quartets are not considered a single primitive in this computation
 // Measurement of the bvh quality
 func (node *bvhNode) cost() float64 {
 	if node.isLeaf {
