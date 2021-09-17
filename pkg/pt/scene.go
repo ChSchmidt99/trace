@@ -29,7 +29,7 @@ func (s *Scene) CompileLBVH() BVH {
 	return DefaultLBVH(prims)
 }
 
-func (s *Scene) CompilePHR(alpha float64, delta, branchingFactor int) BVH {
+func (s *Scene) CompilePHR(alpha, delta float64, branchingFactor int) BVH {
 	prims := s.root.collectTracables(IdentityMatrix())
 	builder := NewPHRBuilder(prims, alpha, delta, branchingFactor, runtime.GOMAXPROCS(0))
 	return builder.Build()

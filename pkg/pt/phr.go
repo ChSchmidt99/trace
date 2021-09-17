@@ -12,7 +12,7 @@ const MAX_CUT_SIZE = 2500
 
 type PhrBuilder struct {
 	Alpha           float64 // How quickly cut size will shrink
-	Delta           int     // Determines size of initial cut
+	Delta           float64 // Determines size of initial cut
 	BranchingFactor int
 	Threshold       AreaThreshold
 	Split           SplitFunction
@@ -27,7 +27,7 @@ func NewDefaultBuilder(primitives []tracable) PhrBuilder {
 	return NewPHRBuilder(primitives, 0.5, 6, 2, runtime.GOMAXPROCS(0))
 }
 
-func NewPHRBuilder(primitives []tracable, alpha float64, delta int, branchingFactor int, threadCount int) PhrBuilder {
+func NewPHRBuilder(primitives []tracable, alpha float64, delta float64, branchingFactor int, threadCount int) PhrBuilder {
 	return PhrBuilder{
 		Alpha:           alpha,
 		Delta:           delta,
@@ -355,9 +355,9 @@ func makeLeaf(bounding aabb, nodes ...*bvhNode) *bvhNode {
 	return leaf
 }
 
-type AreaThreshold func(surface float64, alpha float64, delta int, depth int) float64
+type AreaThreshold func(surface float64, alpha float64, delta float64, depth int) float64
 
-func DefaultThreshold(surface float64, alpha float64, delta int, depth int) float64 {
+func DefaultThreshold(surface float64, alpha float64, delta float64, depth int) float64 {
 	return surface / math.Pow(2, alpha*float64(depth)+float64(delta))
 }
 

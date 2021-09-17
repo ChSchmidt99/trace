@@ -54,7 +54,7 @@ func NewNoLightRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 func NewBenchmarkRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 	return &ImageRenderer{
 		NumCPU:   runtime.GOMAXPROCS(0),
-		MaxDepth: 2,
+		MaxDepth: 5,
 		Bvh:      bvh,
 		Spp:      1,
 		Camera:   camera,

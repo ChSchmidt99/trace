@@ -1,24 +1,95 @@
 package pt
 
-import (
-	"fmt"
-	"log"
-	"math"
-	"time"
+import "math"
 
-	"changkun.de/x/bo"
-)
-
+// TODO: Reevaluate these numbers
 const (
-	EVAL_WIDTH  = 256
-	EVAL_HEIGHT = 144
-	//EVAL_WIDTH  = 256
-	//EVAL_HEIGHT = 144
+	PRIM_THRESH = 300000
+	RES_THRESH  = 100000
 )
 
 type Optimizer interface {
-	OptimizedPHRparams(aux BVH, camera *Camera, branching int, threads int) (alpha float64, delta int)
+	OptimizedPHRparams(aux BVH, branching int, threads int) (alpha float64, delta float64)
 }
+
+type gridOptimizer struct {
+	Alphas []float64
+	Deltas []float64
+	pixels int
+}
+
+func NewDefaultGridOptimizer(frameWidth int, frameHeight int) gridOptimizer {
+	return NewGridOptimizer([]float64{0.4, 0.45, 0.5}, []float64{6, 7, 8, 9}, frameWidth, frameHeight)
+}
+
+func NewGridOptimizer(alphas []float64, deltas []float64, frameWidth int, frameHeight int) gridOptimizer {
+	return gridOptimizer{
+		Alphas: alphas,
+		Deltas: deltas,
+		pixels: frameWidth * frameHeight,
+	}
+}
+
+type evaluation struct {
+	sahCost   float64
+	buildCost int
+	alpha     float64
+	delta     float64
+}
+
+func (g gridOptimizer) OptimizedPHRparams(aux BVH, branching int, threads int) (alpha float64, delta float64) {
+	builder := NewPHRBuilder(aux.prims, 0, 0, branching, threads)
+	evaluations := make([]evaluation, 0, len(g.Alphas)*len(g.Deltas))
+	// Run all alpha-delta combinations
+	for _, a := range g.Alphas {
+		for _, d := range g.Deltas {
+			builder.Alpha = a
+			builder.Delta = d
+			bvh, buildCost := builder.BuildWithCost(aux)
+			evaluations = append(evaluations, evaluation{
+				sahCost:   bvh.Cost(),
+				buildCost: buildCost,
+				alpha:     a,
+				delta:     d,
+			})
+		}
+	}
+
+	// Determine max values
+	maxBuildCost := 0
+	maxSAHCost := 0.0
+	for _, eval := range evaluations {
+		if eval.buildCost > maxBuildCost {
+			maxBuildCost = eval.buildCost
+		}
+		if eval.sahCost > maxSAHCost {
+			maxSAHCost = eval.sahCost
+		}
+	}
+
+	// Evaluate results
+	minCost := math.MaxFloat64
+	var bestEvaluation evaluation
+	o := omega(len(aux.prims), g.pixels)
+	for _, eval := range evaluations {
+		cost := evalPHR(eval.sahCost, maxSAHCost, eval.buildCost, maxBuildCost, o)
+		if cost < float64(minCost) {
+			minCost = cost
+			bestEvaluation = eval
+		}
+	}
+	return bestEvaluation.alpha, bestEvaluation.delta
+}
+
+func omega(primitives int, pixels int) float64 {
+	return (2.0*(float64(primitives)/PRIM_THRESH) + float64(pixels)/RES_THRESH) / 3
+}
+
+func evalPHR(SAHcost, maxSAHcost float64, buildCost int, maxBuildCost int, omega float64) float64 {
+	return (float64(buildCost) / float64(maxBuildCost)) + omega*(SAHcost/maxSAHcost)
+}
+
+/*
 
 type bayesianOptimizer struct {
 	alphaParam bo.UniformParam
@@ -45,8 +116,7 @@ func NewBayesianOptimizer(alphaRange [2]float64, deltaRange [2]int) bayesianOpti
 	}
 }
 
-// TODO: Also optimize Branching factor?
-func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branching int, threads int) (alpha float64, delta int) {
+func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branching int, threads int) (alpha float64, delta float64) {
 	builder := NewPHRBuilder(aux.prims, 0, 0, branching, threads)
 	e := evaluater{
 		set: false,
@@ -67,79 +137,8 @@ func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branchin
 	return x[op.alphaParam], mapDelta(op.deltaRange, x[op.deltaParam])
 }
 
-// Stores the initial evaluation to use as a base line
-// TODO: Add weight depending on canvas size and scene complexity
-// TODO: Better metric than build time (read build complexity from params)
-type evaluater struct {
-	cost      float64
-	buildTime time.Duration
-	set       bool
-}
-
-func (e *evaluater) evalPHR(bvh BVH, camera *Camera, buildTime time.Duration) float64 {
-	if !e.set {
-		e.cost = AvgRayCost(bvh, camera)
-		e.buildTime = buildTime
-		e.set = true
-		return 2
-	}
-	cost := AvgRayCost(bvh, camera)
-	eval := (cost / e.cost) + (float64(buildTime) / float64(e.buildTime))
-	fmt.Printf("Build Time: %v Cost: %v Evaluation: %v\n", buildTime, cost, eval)
-	return eval
-}
-
-// TODO: Make private
-func AvgRayCost(bvh BVH, camera *Camera) float64 {
-	costSum := 0.0
-	r := ray{}
-	for y := 0; y < EVAL_HEIGHT; y++ {
-		for x := 0; x < EVAL_WIDTH; x++ {
-			s := float64(x) / float64(EVAL_WIDTH-1)
-			t := float64(y) / float64(EVAL_HEIGHT-1)
-			camera.castRayReuse(s, t, &r)
-			costSum += bvh.rayCost(r, 0.001, math.MaxFloat64)
-		}
-	}
-	return costSum
-}
-
 func mapDelta(deltaRange [2]int, t float64) int {
 	abs := deltaRange[1] - deltaRange[0]
 	return deltaRange[0] + int(float64(abs)*t)
 }
-
-type gridOptimizer struct {
-	Alphas []float64
-	Deltas []int
-}
-
-func NewGridOptimizer(alphas []float64, deltas []int) gridOptimizer {
-	return gridOptimizer{
-		Alphas: alphas,
-		Deltas: deltas,
-	}
-}
-
-func (g gridOptimizer) OptimizedPHRparams(aux BVH, camera *Camera, branching int, threads int) (alpha float64, delta int) {
-	builder := NewPHRBuilder(aux.prims, 0, 0, branching, threads)
-	minCost := math.MaxFloat64
-	e := evaluater{
-		set: false,
-	}
-	for _, a := range g.Alphas {
-		for _, d := range g.Deltas {
-			builder.Alpha = a
-			builder.Delta = d
-			start := time.Now()
-			bvh := builder.BuildFromAuxilary(aux)
-			cost := e.evalPHR(bvh, camera, time.Since(start))
-			if cost < minCost {
-				minCost = cost
-				alpha = a
-				delta = d
-			}
-		}
-	}
-	return
-}
+*/
