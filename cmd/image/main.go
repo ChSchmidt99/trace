@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	demo "github/chschmidt99/pt/pkg/demoscenes"
 	. "github/chschmidt99/pt/pkg/pt"
 	"image/png"
@@ -27,7 +26,7 @@ func main() {
 	renderer.Closest = UnlitClosestHitShader
 	renderer.Miss = SkyMissShader
 	renderer.Spp = 1
-	renderer.Verbose = true
+	renderer.Verbose = false
 
 	for i, view := range world.ViewPoints {
 		camera.SetTransformation(view)
@@ -40,6 +39,6 @@ func main() {
 			panic(err)
 		}
 		png.Encode(f, img)
-		fmt.Printf("Written image to " + imageName + "\n")
+		//fmt.Printf("Written image to " + imageName + "\n")
 	}
 }

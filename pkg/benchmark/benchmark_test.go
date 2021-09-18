@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	AR  = 1.0
-	FOV = 60.0
-	//FRAME_SIZE = 256
-	FRAME_SIZE = 512
+	AR         = 1.0
+	FOV        = 60.0
+	FRAME_SIZE = 256
+	//FRAME_SIZE = 512
 )
 
 func BenchmarkBranchingFactor(b *testing.B) {
@@ -163,21 +163,22 @@ func BenchRender(b *testing.B, name string, bvh pt.BVH, view pt.CameraTransforma
 }
 
 func TestPHR(t *testing.T) {
+
 	world := demoscenes.Bunny()
 	primitives := world.Scene.UntransformedTracables()
 	aux := pt.DefaultLBVH(primitives)
-	fmt.Printf("%v\n", aux.Cost())
-	/*
-		builder := pt.NewPHRBuilder(primitives, 0, 0, 2, runtime.GOMAXPROCS(0))
-		for alpha := 0.4; alpha < 0.7; alpha += 0.05 {
-			for delta := 5; delta <= 10; delta += 1 {
-				builder.Alpha = alpha
-				builder.Delta = float64(delta)
-				_, cost := builder.BuildWithCost(aux)
-				fmt.Printf("%v\n", cost)
-			}
+	//fmt.Printf("%v\n", aux.Cost())
+
+	builder := pt.NewPHRBuilder(primitives, 0, 0, 2, runtime.GOMAXPROCS(0))
+	for alpha := 0.4; alpha < 0.7; alpha += 0.05 {
+		for delta := 5; delta <= 10; delta += 1 {
+			builder.Alpha = alpha
+			builder.Delta = float64(delta)
+			bvh, _ := builder.BuildWithCost(aux)
+			fmt.Printf("%v\n", bvh.Size())
 		}
-	*/
+	}
+
 }
 
 /*

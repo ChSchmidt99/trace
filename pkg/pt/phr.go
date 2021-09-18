@@ -67,7 +67,6 @@ func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 
 	// Start initial job
 	p.jobs <- phrJob{
-		depth:      1,
 		cut:        cut,
 		parent:     temp,
 		childIndex: 0,
@@ -85,7 +84,6 @@ func (p *PhrBuilder) BuildFromAuxilary(auxilaryBVH BVH) BVH {
 }
 
 type phrJob struct {
-	depth      int
 	cut        phrCut
 	parent     *bvhNode
 	childIndex int
@@ -118,8 +116,8 @@ func (p *PhrBuilder) buildSubTree(job phrJob, wg *sync.WaitGroup) {
 		// Split biggest cut
 		left, right := p.Split(cuts[maxI])
 		if right != nil {
-			cuts[maxI] = p.refined(*left, job.depth)
-			cuts = append(cuts, p.refined(*right, job.depth))
+			cuts[maxI] = p.refined(*left)
+			cuts = append(cuts, p.refined(*right))
 		} else {
 			// If cut was not split, make it a leaf node
 			cuts[maxI] = phrCut{
@@ -140,7 +138,6 @@ func (p *PhrBuilder) buildSubTree(job phrJob, wg *sync.WaitGroup) {
 	// Queue all new children to be processed by this or any other thread
 	for i, cut := range cuts {
 		job := phrJob{
-			depth:      job.depth + 1,
 			cut:        cut,
 			parent:     branch,
 			childIndex: i,
@@ -180,7 +177,6 @@ func (p *PhrBuilder) BuildWithCost(auxilaryBVH BVH) (BVH, int) {
 
 	// Start initial job
 	p.jobs <- phrJob{
-		depth:      1,
 		cut:        cut,
 		parent:     temp,
 		childIndex: 0,
@@ -225,8 +221,8 @@ func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int6
 		atomic.AddInt64(cost, int64(len(cuts[maxI].nodes)))
 		left, right := p.Split(cuts[maxI])
 		if right != nil {
-			cuts[maxI] = p.refined(*left, job.depth)
-			cuts = append(cuts, p.refined(*right, job.depth))
+			cuts[maxI] = p.refined(*left)
+			cuts = append(cuts, p.refined(*right))
 		} else {
 			// If cut was not split, make it a leaf node
 			cuts[maxI] = phrCut{
@@ -245,7 +241,6 @@ func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int6
 	// Queue all new children to be processed by this or any other thread
 	for i, cut := range cuts {
 		newJob := phrJob{
-			depth:      job.depth + 1,
 			cut:        cut,
 			parent:     branch,
 			childIndex: i,
@@ -264,6 +259,7 @@ func (p *PhrBuilder) findInitialCut(auxilary BVH, threadCount int) phrCut {
 	queue := make(chan *bvhNode, 1024)
 	cut := phrCut{
 		bounding: auxilary.root.bounding,
+		depth:    1,
 	}
 	m := sync.Mutex{}
 	wg := sync.WaitGroup{}
@@ -315,13 +311,13 @@ func (p *PhrBuilder) processNodeInitialCut(node *bvhNode, wg *sync.WaitGroup, m 
 	}
 }
 
-func (p *PhrBuilder) refined(cut phrCut, depth int) phrCut {
+func (p *PhrBuilder) refined(cut phrCut) phrCut {
 	refinedCut := make([]*bvhNode, 0, len(cut.nodes))
 	for _, node := range cut.nodes {
 		if node.isLeaf {
 			refinedCut = append(refinedCut, node)
 		} else {
-			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, depth) {
+			if node.bounding.surface() < p.Threshold(p.surface, p.Alpha, p.Delta, cut.depth) {
 				// Keep node in cut
 				refinedCut = append(refinedCut, node)
 			} else {
@@ -338,6 +334,7 @@ func (p *PhrBuilder) refined(cut phrCut, depth int) phrCut {
 	return phrCut{
 		nodes:    refinedCut,
 		bounding: cut.bounding,
+		depth:    cut.depth + 1,
 	}
 }
 
@@ -364,6 +361,7 @@ func DefaultThreshold(surface float64, alpha float64, delta float64, depth int) 
 type phrCut struct {
 	nodes    []*bvhNode
 	bounding aabb
+	depth    int
 }
 
 type SplitFunction func(phrCut) (*phrCut, *phrCut)
@@ -380,8 +378,8 @@ func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {
 		return sorted2[i].bounding.barycenter.Y < sorted2[j].bounding.barycenter.Y
 	})
 
-	xSAH := minCost(cut.nodes, cut.bounding)
-	ySAH := minCost(sorted2, cut.bounding)
+	xSAH := minCost(cut.nodes, cut.bounding, cut.depth)
+	ySAH := minCost(sorted2, cut.bounding, cut.depth)
 	// Keep the sorted slice with lower cost and override the other by sorting along z axis
 	// Finally, return the split with the lowest cost
 
@@ -389,7 +387,7 @@ func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {
 		sort.SliceStable(sorted2, func(i, j int) bool {
 			return sorted2[i].bounding.barycenter.Z < sorted2[j].bounding.barycenter.Z
 		})
-		zSAH := minCost(sorted2, cut.bounding)
+		zSAH := minCost(sorted2, cut.bounding, cut.depth)
 		if xSAH.cost < zSAH.cost {
 			return xSAH.left, xSAH.right
 		} else {
@@ -399,7 +397,7 @@ func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {
 		sort.SliceStable(cut.nodes, func(i, j int) bool {
 			return cut.nodes[i].bounding.barycenter.Z < cut.nodes[j].bounding.barycenter.Z
 		})
-		zSAH := minCost(cut.nodes, cut.bounding)
+		zSAH := minCost(cut.nodes, cut.bounding, cut.depth)
 		if ySAH.cost < zSAH.cost {
 			return ySAH.left, ySAH.right
 		} else {
@@ -415,7 +413,7 @@ type sah struct {
 }
 
 // Uses SAH to compute the best split
-func minCost(sortedNodes []*bvhNode, bounding aabb) sah {
+func minCost(sortedNodes []*bvhNode, bounding aabb, depth int) sah {
 	// Compute and track right costs by incrementally extending bounding box
 	SaRight := sortedNodes[len(sortedNodes)-1].bounding
 	rightCosts := make([]float64, len(sortedNodes))
@@ -428,6 +426,7 @@ func minCost(sortedNodes []*bvhNode, bounding aabb) sah {
 		rightCuts[i] = phrCut{
 			nodes:    sortedNodes[i:],
 			bounding: SaRight,
+			depth:    depth,
 		}
 	}
 
@@ -437,6 +436,7 @@ func minCost(sortedNodes []*bvhNode, bounding aabb) sah {
 		left: &phrCut{
 			nodes:    sortedNodes,
 			bounding: bounding,
+			depth:    depth,
 		},
 	}
 
@@ -450,6 +450,7 @@ func minCost(sortedNodes []*bvhNode, bounding aabb) sah {
 			min.left = &phrCut{
 				nodes:    sortedNodes[:i],
 				bounding: SaLeft,
+				depth:    depth,
 			}
 			min.right = &rightCuts[i]
 		}
