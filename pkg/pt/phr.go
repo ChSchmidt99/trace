@@ -158,10 +158,10 @@ func (p *PhrBuilder) buildSubTree(job phrJob, wg *sync.WaitGroup) {
 func (p *PhrBuilder) BuildWithCost(auxilaryBVH BVH) (BVH, int) {
 	p.surface = auxilaryBVH.root.bounding.surface()
 	p.initialCutSize = 0
-	var cost int32 = 0
+	var cost int64 = 0
 	// Determine initial cut
 	cut := p.findInitialCut(auxilaryBVH, p.threadCount)
-	cost += int32(len(cut.nodes))
+	cost += int64(len(cut.nodes))
 	// Start workers
 	wg := sync.WaitGroup{}
 	p.jobs = make(chan phrJob, p.threadCount)
@@ -197,7 +197,7 @@ func (p *PhrBuilder) BuildWithCost(auxilaryBVH BVH) (BVH, int) {
 	}, int(cost)
 }
 
-func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int32) {
+func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int64) {
 	if len(job.cut.nodes) <= 1 {
 		job.parent.addChild(job.cut.nodes[0], job.childIndex)
 		wg.Done()
@@ -222,7 +222,7 @@ func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int3
 			break
 		}
 		// Split biggest cut
-		atomic.AddInt32(cost, 1)
+		atomic.AddInt64(cost, int64(len(cuts[maxI].nodes)))
 		left, right := p.Split(cuts[maxI])
 		if right != nil {
 			cuts[maxI] = p.refined(*left, job.depth)

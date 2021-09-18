@@ -13,13 +13,18 @@ func Bunny() DemoScene {
 	views := []CameraTransformation{
 		{
 			LookFrom: NewVector3(0, 1, 2),
-			LookAt:   NewVector3(-.25, .65, 0),
+			LookAt:   NewVector3(-.25, .6, 0),
 			Up:       NewVector3(0, 1, 0),
 		},
 		{
-			LookFrom: NewVector3(-2, 1, 0),
-			LookAt:   NewVector3(-.25, .65, 0),
+			LookFrom: NewVector3(-2, 2, 0),
+			LookAt:   NewVector3(0, .5, 0),
 			Up:       NewVector3(0, 1, 0),
+		},
+		{
+			LookFrom: NewVector3(1.7, 1, 0),
+			LookAt:   NewVector3(0, .7, 0),
+			Up:       NewVector3(1, 1, 0),
 		},
 	}
 

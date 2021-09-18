@@ -9,8 +9,8 @@ import (
 
 // TODO: Reevaluate these numbers
 const (
-	PRIM_THRESH = 300000
-	RES_THRESH  = 100000
+	PRIM_THRESH = 3000000
+	RES_THRESH  = 1000000
 )
 
 type Optimizer interface {
@@ -140,11 +140,13 @@ func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, branching int, threads i
 	omega := omega(len(aux.prims), op.pixels)
 	x, _, err := op.o.RunSerial(func(m map[bo.Param]float64) float64 {
 		alpha, delta := m[op.alphaParam], m[op.deltaParam]
+		if alpha == 0 || delta == 0 {
+			return evalPHR(maxSAHcost, maxSAHcost, maxBuildCost, maxBuildCost, omega)
+		}
 		builder.Alpha = alpha
 		builder.Delta = delta
 		bvh, buildCost := builder.BuildWithCost(aux)
-		cost := evalPHR(bvh.Cost(), maxSAHcost, buildCost, maxBuildCost, omega)
-		return cost
+		return evalPHR(bvh.Cost(), maxSAHcost, buildCost, maxBuildCost, omega)
 	})
 	if err != nil {
 		log.Fatal(err)

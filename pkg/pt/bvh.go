@@ -47,6 +47,10 @@ func (bvh *BVH) Cost() float64 {
 	return bvh.root.cost()
 }
 
+func (bvh *BVH) Size() int {
+	return bvh.root.subtreeSize()
+}
+
 func (bvh *BVH) Print() {
 	stack := bvhStack{}
 	stack.push(bvh.root)
