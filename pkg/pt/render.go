@@ -123,14 +123,16 @@ type HeatMapRenderer struct {
 	NumCPU            int
 	Bvh               BVH
 	Camera            *Camera
+	Threshold         int
 	intersectionCount TraversalCountShader
 }
 
-func NewHeatMapRenderer(bvh BVH, camera *Camera) *HeatMapRenderer {
+func NewHeatMapRenderer(bvh BVH, camera *Camera, threshold int) *HeatMapRenderer {
 	return &HeatMapRenderer{
 		NumCPU:            runtime.GOMAXPROCS(0),
 		Bvh:               bvh,
 		Camera:            camera,
+		Threshold:         threshold,
 		intersectionCount: DefaultTraversalCountShader,
 	}
 }
@@ -152,7 +154,7 @@ func (r *HeatMapRenderer) RenderToBuffer(buff Buffer) {
 					v := float64(y) / float64(h-1)
 					r.Camera.castRayReuse(u, v, &ray)
 					count := r.Bvh.traversalSteps(ray, 0.001, math.MaxFloat64)
-					buff.addSample(x, y, r.intersectionCount(count))
+					buff.addSample(x, y, r.intersectionCount(r, count))
 				}
 			}
 			wg.Done()
@@ -194,6 +196,7 @@ func DefaultClosestHitShader(renderer *ImageRenderer, c context, r ray, h *hit) 
 	}
 }
 
+// TODO: Needed?
 func UnlitClosestHitShader(renderer *ImageRenderer, c context, r ray, h *hit) Color {
 	if c.depth > renderer.MaxDepth {
 		return NewColor(0, 0, 0)
@@ -228,22 +231,14 @@ func SkyMissShader(renderer *ImageRenderer, c context, r ray) Color {
 	return white.Scale(1.0 - t).Add(blue.Scale(t))
 }
 
-type TraversalCountShader func(count int) Color
+type TraversalCountShader func(renderer *HeatMapRenderer, count int) Color
 
-func DefaultTraversalCountShader(count int) Color {
-	/*
-		if count > 50 {
-			factor := float64(count) / 80
-			return NewColor(factor, 0, 0)
-		}
-		factor := float64(count) / 60
-		return NewColor(0, factor, 1-factor)
-	*/
-	if count > 300 {
-		factor := float64(count) / 500
+func DefaultTraversalCountShader(renderer *HeatMapRenderer, count int) Color {
+	if count > renderer.Threshold {
+		factor := float64(count) / float64(renderer.Threshold) * 2
 		return NewColor(factor, 0, 0)
 	}
-	factor := float64(count) / 350
+	factor := float64(count) / (float64(renderer.Threshold) * 1.25)
 	return NewColor(0, factor, 1-factor)
 
 }

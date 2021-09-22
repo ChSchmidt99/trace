@@ -7,10 +7,9 @@ import (
 	"changkun.de/x/bo"
 )
 
-// TODO: Reevaluate these numbers
 const (
-	PRIM_THRESH = 3000000
-	RES_THRESH  = 1000000
+	PRIM_THRESH = 2000000
+	RES_THRESH  = 200000
 )
 
 type Optimizer interface {
@@ -24,7 +23,7 @@ type gridOptimizer struct {
 }
 
 func NewDefaultGridOptimizer(frameWidth, frameHeight int) gridOptimizer {
-	return NewGridOptimizer([]float64{0.4, 0.45, 0.5}, []float64{6, 7, 8, 9}, frameWidth, frameHeight)
+	return NewGridOptimizer([]float64{0.4, 0.45, 0.5, 0.55}, []float64{6, 7, 8, 9}, frameWidth, frameHeight)
 }
 
 func NewGridOptimizer(alphas []float64, deltas []float64, frameWidth, frameHeight int) gridOptimizer {
@@ -87,11 +86,11 @@ func (g gridOptimizer) OptimizedPHRparams(aux BVH, branching int, threads int) (
 }
 
 func omega(primitives int, pixels int) float64 {
-	return (2.0*(float64(primitives)/PRIM_THRESH) + float64(pixels)/RES_THRESH) / 3
+	return math.Pow((float64(primitives)/PRIM_THRESH), 2) * (float64(pixels) / RES_THRESH)
 }
 
 func evalPHR(SAHcost, maxSAHcost float64, buildCost int, maxBuildCost int, omega float64) float64 {
-	return (float64(buildCost) / float64(maxBuildCost)) + omega*(SAHcost/maxSAHcost)
+	return (float64(buildCost) / float64(maxBuildCost)) + math.Pow(omega, 2)*(SAHcost/maxSAHcost)
 }
 
 type bayesianOptimizer struct {
@@ -104,7 +103,7 @@ type bayesianOptimizer struct {
 }
 
 func NewDefaultBayesianOptimizer(frameWidth, frameHeight int) bayesianOptimizer {
-	alphaRange := [2]float64{0.4, 0.5}
+	alphaRange := [2]float64{0.4, 0.55}
 	deltaRange := [2]float64{6, 9}
 	return NewBayesianOptimizer(alphaRange, deltaRange, frameWidth, frameHeight)
 }
@@ -118,25 +117,25 @@ func NewBayesianOptimizer(alphaRange [2]float64, deltaRange [2]float64, frameWid
 		Min: deltaRange[0],
 		Max: deltaRange[1],
 	}
-	o := bo.NewOptimizer([]bo.Param{alpha, delta})
+
+	o := bo.NewOptimizer([]bo.Param{alpha, delta}, bo.WithMinimize(true), bo.WithExploration(bo.EI{}))
 	return bayesianOptimizer{
 		alphaParam: alpha,
 		deltaParam: delta,
+		alphaRange: alphaRange,
+		deltaRange: deltaRange,
 		o:          o,
 		pixels:     frameWidth * frameHeight,
 	}
 }
 
 func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, branching int, threads int) (alpha float64, delta float64) {
-
 	builder := NewPHRBuilder(aux.prims, op.alphaRange[0], op.deltaRange[0], branching, threads)
 	bvh := builder.BuildFromAuxilary(aux)
 	maxSAHcost := bvh.Cost()
-
 	builder.Alpha = op.alphaRange[1]
 	builder.Delta = op.deltaRange[1]
 	_, maxBuildCost := builder.BuildWithCost(aux)
-
 	omega := omega(len(aux.prims), op.pixels)
 	x, _, err := op.o.RunSerial(func(m map[bo.Param]float64) float64 {
 		alpha, delta := m[op.alphaParam], m[op.deltaParam]
@@ -146,7 +145,8 @@ func (op bayesianOptimizer) OptimizedPHRparams(aux BVH, branching int, threads i
 		builder.Alpha = alpha
 		builder.Delta = delta
 		bvh, buildCost := builder.BuildWithCost(aux)
-		return evalPHR(bvh.Cost(), maxSAHcost, buildCost, maxBuildCost, omega)
+		bvhCost := bvh.Cost()
+		return evalPHR(bvhCost, maxSAHcost, buildCost, maxBuildCost, omega)
 	})
 	if err != nil {
 		log.Fatal(err)

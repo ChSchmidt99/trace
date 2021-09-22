@@ -62,22 +62,22 @@ type Refractive struct {
 }
 
 func (d Refractive) scatter(ray *ray, intersec *hit, r *rand.Rand) (bool, Color) {
-	defractionRatio := d.Ratio
+	refractionRatio := d.Ratio
 	if intersec.frontFace {
-		defractionRatio = 1 / d.Ratio
+		refractionRatio = 1 / d.Ratio
 	}
 
 	unitDir := ray.direction.Unit()
 	cos_theta := math.Min(unitDir.Mul(-1).Dot(intersec.normal), 1.0)
 	sin_theta := math.Sqrt(1.0 - cos_theta*cos_theta)
 
-	cannot_refract := defractionRatio*sin_theta > 1.0
+	cannot_refract := refractionRatio*sin_theta > 1.0
 
 	var direction Vector3
-	if cannot_refract || reflectance(cos_theta, defractionRatio) > rand.Float64() {
+	if cannot_refract || reflectance(cos_theta, refractionRatio) > rand.Float64() {
 		direction = reflect(unitDir, intersec.normal)
 	} else {
-		direction = refract(unitDir, intersec.normal, defractionRatio)
+		direction = refract(unitDir, intersec.normal, refractionRatio)
 	}
 	ray.reuse(intersec.point, direction)
 	return true, d.Albedo

@@ -74,7 +74,7 @@ func (aabb aabb) intersected(ray ray, tMin, tMax float64) bool {
 		return false
 	}
 
-	// Check if the ray origin is in front of the box or behind
+	// Check if the intersection lies outside tMin and tMax
 	if tZmin > tXmin {
 		tXmin = tZmin
 	}

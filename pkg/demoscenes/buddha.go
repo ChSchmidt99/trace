@@ -2,8 +2,8 @@ package demoscenes
 
 import . "github/chschmidt99/pt/pkg/pt"
 
-func Hairball() DemoScene {
-	geometry := ParseFromPath("../../assets/local/hairball.obj")
+func Buddha() DemoScene {
+	geometry := ParseFromPath("../../assets/local/buddha/buddha.obj")
 	whiteMat := Diffuse{Albedo: NewColor(.73, .73, .73)}
 	root := NewSceneNode(NewMesh(geometry, whiteMat))
 	scene := NewScene()
@@ -11,14 +11,14 @@ func Hairball() DemoScene {
 
 	views := []CameraTransformation{
 		{
-			LookFrom: NewVector3(7, 7, 7),
+			LookFrom: NewVector3(0, 0, -1),
 			LookAt:   NewVector3(0, 0, 0),
 			Up:       NewVector3(0, 1, 0),
 		},
 	}
 
 	return DemoScene{
-		Name:       "Hairball",
+		Name:       "Buddha",
 		Scene:      scene,
 		ViewPoints: views,
 	}

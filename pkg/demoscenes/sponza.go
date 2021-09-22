@@ -2,23 +2,24 @@ package demoscenes
 
 import . "github/chschmidt99/pt/pkg/pt"
 
-func Deer(ar, fov float64) DemoScene {
-	geometry := ParseFromPath("../../assets/deer.obj")
+func Sponza() DemoScene {
+	geometry := ParseFromPath("../../assets/local/sponza/sponza.obj")
 	whiteMat := Diffuse{Albedo: NewColor(.73, .73, .73)}
-	bunny := NewSceneNode(NewMesh(geometry, whiteMat))
+
+	sponza := NewSceneNode(NewMesh(geometry, whiteMat))
 	scene := NewScene()
-	scene.Add(bunny)
+	scene.Add(sponza)
 
 	views := []CameraTransformation{
 		{
-			LookFrom: NewVector3(500, 250, 500),
-			LookAt:   NewVector3(0, 110, 0),
+			LookFrom: NewVector3(-5, 3, 0),
+			LookAt:   NewVector3(5, 3, 0),
 			Up:       NewVector3(0, 1, 0),
 		},
 	}
 
 	return DemoScene{
-		Name:       "Deer",
+		Name:       "Sponza",
 		Scene:      scene,
 		ViewPoints: views,
 	}

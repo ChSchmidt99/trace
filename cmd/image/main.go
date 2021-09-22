@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	demo "github/chschmidt99/pt/pkg/demoscenes"
 	. "github/chschmidt99/pt/pkg/pt"
 	"image/png"
@@ -15,18 +16,24 @@ const (
 )
 
 func main() {
-	//world := demo.CornellBox(ASPECT_RATIO, FOV)
-	world := demo.Bunny()
-	//world := demo.SanMiguel(ASPECT_RATIO, FOV)
-	//world := demo.Hairball(ASPECT_RATIO, FOV)
+	//world := demo.CornellBox()
+	//world := demo.Bunny()
+	//world := demo.Dragon()
+	//world := demo.SanMiguel()
+	//world := demo.Sponza()
+	//world := demo.Buddha()
+	//world := demo.Hairball()
+	//world := demo.Sibenik()
+	//world := demo.Breakfast()
+	world := demo.Fireplace()
 
 	camera := NewDefaultCamera(ASPECT_RATIO, FOV)
-	bvh := world.Scene.CompilePHR(0.5, 6, 2)
+	bvh := world.Scene.CompilePHR(0.55, 9, 4)
 	renderer := NewDefaultRenderer(bvh, camera)
-	renderer.Closest = UnlitClosestHitShader
+	//renderer.Closest = UnlitClosestHitShader
 	renderer.Miss = SkyMissShader
-	renderer.Spp = 1
-	renderer.Verbose = false
+	renderer.Spp = 300
+	renderer.Verbose = true
 
 	for i, view := range world.ViewPoints {
 		camera.SetTransformation(view)
@@ -39,6 +46,6 @@ func main() {
 			panic(err)
 		}
 		png.Encode(f, img)
-		//fmt.Printf("Written image to " + imageName + "\n")
+		fmt.Printf("Written image to " + imageName + "\n")
 	}
 }
