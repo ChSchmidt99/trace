@@ -11,26 +11,28 @@ import (
 
 const (
 	ASPECT_RATIO = 4.0 / 3
-	FOV          = 50.0
-	RESOLUTION   = 400
+	FOV          = 55.0
+	RESOLUTION   = 1200
 )
 
 func main() {
 	//world := demo.CornellBox()
 	//world := demo.Bunny()
-	world := demo.SanMiguel()
+	//world := demo.SanMiguel()
 	//world := demo.Hairball()
+	world := demo.Fireplace()
 
 	camera := NewDefaultCamera(ASPECT_RATIO, FOV)
-	bvh := world.Scene.CompilePHR(0.5, 6, 2)
-	renderer := NewHeatMapRenderer(bvh, camera, 300)
+	//bvh := world.Scene.CompilePHR(0.5, 6, 2)
+	bvh := world.Scene.CompileLBVH()
+	renderer := NewHeatMapRenderer(bvh, camera, 100)
 
 	for i, view := range world.ViewPoints {
 		camera.SetTransformation(view)
 		buff := NewPxlBufferAR(RESOLUTION, ASPECT_RATIO)
 		renderer.RenderToBuffer(buff)
 		img := buff.ToImage()
-		imageName := world.Name + " " + strconv.Itoa(i) + ".png"
+		imageName := world.Name + "_" + strconv.Itoa(i) + ".png"
 		f, err := os.Create(imageName)
 		if err != nil {
 			panic(err)
