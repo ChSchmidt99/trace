@@ -40,10 +40,13 @@ func NewSphere(center Vector3, radius float64) *Sphere {
 }
 
 func (s *Sphere) transformed(t Matrix4) primitive {
-	pointOnSphere := s.center.Add(NewVector3(s.radius, 0, 0))
-	newCenter := s.center.ToPoint().Transformed(t).ToV3()
-	newRadius := pointOnSphere.ToPoint().Transformed(t).ToV3().Length()
-	return NewSphere(newCenter, newRadius)
+	/*
+		pointOnSphere := s.center.Add(NewVector3(s.radius, 0, 0))
+		newCenter := s.center.ToPoint().Transformed(t).ToV3()
+		newRadius := pointOnSphere.ToPoint().Transformed(t).ToV3().Length()
+		return NewSphere(newCenter, newRadius)
+	*/
+	return NewSphere(s.center.ToPoint().Transformed(t).ToV3(), s.radius)
 }
 
 func (s *Sphere) bounding() aabb {
@@ -72,7 +75,7 @@ func (s *Sphere) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool {
 		}
 	}
 
-	hitOut.point = ray.Position(t)
+	hitOut.point = ray.position(t)
 	hitOut.normal = hitOut.point.Sub(s.center).Mul(1 / s.radius)
 	hitOut.frontFace = ray.direction.Dot(hitOut.normal) < 0
 	if !hitOut.frontFace {
@@ -194,7 +197,7 @@ func (tri *Triangle) intersected(ray ray, tMin, tMax float64, hitOut *hit) bool 
 		return false
 	}
 
-	hitOut.point = ray.Position(t)
+	hitOut.point = ray.position(t)
 	hitOut.frontFace = det > 0
 	hitOut.normal = tri.normal(u, v)
 	if !hitOut.frontFace {

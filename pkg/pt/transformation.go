@@ -2,11 +2,11 @@ package pt
 
 import "math"
 
-func scaleUniform(factor float64) Matrix4 {
-	return scale(factor, factor, factor)
+func ScaleUniform(factor float64) Matrix4 {
+	return Scale(factor, factor, factor)
 }
 
-func scale(x, y, z float64) Matrix4 {
+func Scale(x, y, z float64) Matrix4 {
 	return Matrix4{
 		x, 0, 0, 0,
 		0, y, 0, 0,
@@ -15,7 +15,7 @@ func scale(x, y, z float64) Matrix4 {
 	}
 }
 
-func translate(x, y, z float64) Matrix4 {
+func Translate(x, y, z float64) Matrix4 {
 	return Matrix4{
 		1, 0, 0, x,
 		0, 1, 0, y,
@@ -24,7 +24,7 @@ func translate(x, y, z float64) Matrix4 {
 	}
 }
 
-func rotate(dir Vector3, angle float64) Matrix4 {
+func Rotate(dir Vector3, angle float64) Matrix4 {
 	u := dir.Unit()
 	cosa := math.Cos(angle / 2)
 	sina := math.Sin(angle / 2)

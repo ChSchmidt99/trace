@@ -2,12 +2,13 @@ package pt
 
 import (
 	"image"
+	"image/color"
 )
 
 type Buffer interface {
 	addSample(x, y int, c Color)
-	w() int
-	h() int
+	Width() int
+	Height() int
 }
 
 type Pixel struct {
@@ -47,11 +48,11 @@ func (b *PixelBuffer) addSample(x, y int, c Color) {
 	b.buff[y*b.width+x].addSample(c)
 }
 
-func (b *PixelBuffer) h() int {
+func (b *PixelBuffer) Height() int {
 	return b.height
 }
 
-func (b *PixelBuffer) w() int {
+func (b *PixelBuffer) Width() int {
 	return b.width
 }
 
@@ -90,12 +91,16 @@ func (b *FrameBuffer) addSample(x, y int, c Color) {
 	b.buff[y*b.width+x] = c
 }
 
-func (b *FrameBuffer) w() int {
+func (b *FrameBuffer) Width() int {
 	return b.width
 }
 
-func (b *FrameBuffer) h() int {
+func (b *FrameBuffer) Height() int {
 	return b.height
+}
+
+func (b *FrameBuffer) GoColor(index int) color.Color {
+	return b.buff[index].goColor()
 }
 
 func (b *FrameBuffer) ToImage() image.Image {

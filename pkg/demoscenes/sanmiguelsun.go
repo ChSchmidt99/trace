@@ -5,17 +5,18 @@ import . "github/chschmidt99/pt/pkg/pt"
 func SanMiguelSun() DemoScene {
 	geometry := ParseFromPath("../../assets/local/san_miguel/san-miguel-low-poly.obj")
 
-	sphere := NewSphere(NewVector3(15, 25, 5), 6)
-
 	//geometry := ParseFromPath("../../assets/local/san_miguel/san-miguel.obj")
 	whiteMat := Diffuse{Albedo: NewColor(.83, .83, .83)}
-	light := Light{Color: NewColor(10, 6.5, 3)}
 
 	root := NewSceneNode(NewMesh(geometry, whiteMat))
-	sun := NewSceneNode(NewMesh(Geometry{sphere}, light))
 	scene := NewScene()
 	scene.Add(root)
+
+	sphere := NewSphere(NewVector3(15, 25, 5), 6)
+	light := Light{Color: NewColor(10, 6.5, 3)}
+	sun := NewSceneNode(NewMesh(Geometry{sphere}, light))
 	scene.Add(sun)
+
 	views := []CameraTransformation{
 		/*
 			{

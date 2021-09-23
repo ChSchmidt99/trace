@@ -199,6 +199,7 @@ func (node *bvhNode) intersected(prims []tracable, ray ray, tMin, tMax float64, 
 }
 
 func (node *bvhNode) updateAABB(primitives []tracable) {
+	// This can cause an error, if a BVH with only one primitive is called. I assumed that would not be the case, but it is possible.
 	if node.isLeaf {
 		node.bounding = enclosingSlice(node.prims, primitives)
 		// Atomic counter. after all child bounding boxes have been computed the parents bounding box can be calculated

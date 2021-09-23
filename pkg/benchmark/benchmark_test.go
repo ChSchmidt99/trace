@@ -17,22 +17,21 @@ const (
 	PHR_HQ_DELTA   = 9
 )
 
-/*
-func BenchmarkBranchingFactor(b *testing.B) {
-	for _, resolution := range resolutions {
-		for i := 2; i <= 16; i *= 2 {
-			bvh := benchBuildPRH(b, "build_branch_"+strconv.Itoa(i), i, 0.4, 6, world)
-			for j, view := range world.ViewPoints {
-				benchRender(b, "render_branch_"+strconv.Itoa(i)+"_view_"+strconv.Itoa(j), bvh, view, resolution)
-			}
-		}
-	}
+func BenchmarkThreads(b *testing.B) {
+	world := demoscenes.Bunny()
+	builder := pt.NewPHRBuilder(world.Scene.UntransformedTracables(), 0.5, 6, 4, runtime.GOMAXPROCS(0))
+	bvh := builder.Build()
+	benchRender(b, "", bvh, world, 256)
 }
-*/
 
 func BenchmarkScene(b *testing.B) {
+	// Select Scene to be benchmarked
 	world := demoscenes.Fireplace()
+
+	// Specify all tested resolutions
 	resolutions := []int{256, 512}
+
+	// Specify branching factor of BVH
 	branching := 2
 	benchLBVH(b, world, resolutions)
 	benchFullPHR(b, "PHR_Fast", PHR_FAST_ALPHA, PHR_FAST_DELTA, branching, world, resolutions)
@@ -124,62 +123,16 @@ func benchRender(b *testing.B, name string, bvh pt.BVH, world demoscenes.DemoSce
 	buff := pt.NewFrameBufferAR(frameSize, AR)
 	camera := pt.NewDefaultCamera(AR, FOV)
 	renderer := pt.NewBenchmarkRenderer(bvh, camera)
-	for viewIndex, view := range world.ViewPoints {
-		camera.SetTransformation(view)
-		n := fmt.Sprintf(name+"_render_%v_view_%v_%vx%v", world.Name, viewIndex, frameSize, frameSize)
-		b.Run(n, func(b *testing.B) {
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				renderer.RenderToBuffer(buff)
-			}
-		})
-	}
-
-}
-
-/*
-func TestBO(t *testing.T) {
-	world := demoscenes.Hairball()
-	primitives := world.Scene.UntransformedTracables()
-	aux := pt.DefaultLBVH(primitives)
-
-	optimizer := pt.NewDefaultBayesianOptimizer(256, 256)
-	a, d := optimizer.OptimizedPHRparams(aux, 2, runtime.GOMAXPROCS(0))
-	fmt.Printf("256: a %v, d %v\n", a, d)
-
-	optimizer = pt.NewDefaultBayesianOptimizer(512, 512)
-	a, d = optimizer.OptimizedPHRparams(aux, 2, runtime.GOMAXPROCS(0))
-	fmt.Printf("512: a %v, d %v\n", a, d)
-}
-
-
-func TestPHR(t *testing.T) {
-	world := demoscenes.SanMiguel()
-	primitives := world.Scene.UntransformedTracables()
-	aux := pt.DefaultLBVH(primitives)
-	builder := pt.NewPHRBuilder(primitives, 0, 0, 2, runtime.GOMAXPROCS(0))
-	for alpha := 0.4; alpha < 0.7; alpha += 0.05 {
-		for delta := 5; delta <= 10; delta += 1 {
-			builder.Alpha = alpha
-			builder.Delta = float64(delta)
-			bvh, _ := builder.BuildWithCost(aux)
-			fmt.Printf("%v\n", bvh.Size())
+	//for viewIndex, view := range world.ViewPoints {
+	view, viewIndex := world.ViewPoints[0], 0
+	camera.SetTransformation(view)
+	n := fmt.Sprintf(name+"_render_%v_view_%v_%vx%v", world.Name, viewIndex, frameSize, frameSize)
+	b.Run(n, func(b *testing.B) {
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			renderer.RenderToBuffer(buff)
 		}
-	}
-}
-*/
-func TestGrid(t *testing.T) {
-	world := demoscenes.Hairball()
-	primitives := world.Scene.UntransformedTracables()
-	aux := pt.DefaultLBVH(primitives)
+	})
+	//}
 
-	optimizer := pt.NewDefaultGridOptimizer(512, 512)
-	a, d := optimizer.OptimizedPHRparams(aux, 2, runtime.GOMAXPROCS(0))
-	fmt.Printf("512: a %v, d %v\n", a, d)
-
-	/*
-		optimizer = pt.NewDefaultGridOptimizer(512, 512)
-		a, d = optimizer.OptimizedPHRparams(aux, 2, runtime.GOMAXPROCS(0))
-		fmt.Printf("512: a %v, d %v\n", a, d)
-	*/
 }

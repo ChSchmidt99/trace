@@ -65,6 +65,32 @@ func (c *Camera) SetTransformation(transformation CameraTransformation) {
 	c.lowerLeftCorner = c.orientation.origin.Sub(c.horizontal.Mul(0.5)).Sub(c.vertical.Mul(0.5)).Sub(c.orientation.w)
 }
 
+func (c *Camera) Translate(v Vector3) {
+	c.orientation.origin = c.orientation.origin.Add(v)
+	c.lowerLeftCorner = c.orientation.origin.Sub(c.horizontal.Mul(0.5)).Sub(c.vertical.Mul(0.5)).Sub(c.orientation.w)
+}
+
+func (c *Camera) SetFront(v Vector3) {
+	c.orientation.w = v.Unit()
+	c.orientation.u = c.orientation.up.Cross(c.orientation.w).Unit()
+	c.orientation.v = c.orientation.w.Cross(c.orientation.u)
+	c.horizontal = c.orientation.u.Mul(c.viewportWidth)
+	c.vertical = c.orientation.v.Mul(c.viewportHeight)
+	c.lowerLeftCorner = c.orientation.origin.Sub(c.horizontal.Mul(0.5)).Sub(c.vertical.Mul(0.5)).Sub(c.orientation.w)
+}
+
+func (c *Camera) Origin() Vector3 {
+	return c.orientation.origin
+}
+
+func (c *Camera) Up() Vector3 {
+	return c.orientation.up
+}
+
+func (c *Camera) W() Vector3 {
+	return c.orientation.w
+}
+
 // Cast ray in new direction, while keeping origin the same
 func (c *Camera) castRayReuse(s, t float64, ray *ray) {
 	ray.reuseSameOrigin(c.lowerLeftCorner.Add(c.horizontal.Mul(s)).Add(c.vertical.Mul(t)).Sub(c.orientation.origin))
@@ -79,7 +105,7 @@ type ray struct {
 	sign         [3]int
 }
 
-func (r ray) Position(t float64) Vector3 {
+func (r ray) position(t float64) Vector3 {
 	magnitude := r.direction.Mul(t)
 	return r.origin.Add(magnitude)
 }

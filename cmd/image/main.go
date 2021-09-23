@@ -9,48 +9,47 @@ import (
 )
 
 const (
-	ASPECT_RATIO = 4.0 / 3.0
-	FOV          = 70.0
-	RESOLUTION   = 1200
+	ASPECT_RATIO = 1
+	FOV          = 60.0
+	RESOLUTION   = 600
 )
 
+// Comment out which scenes should be rendered
 var worlds = []demo.DemoScene{
-	//demo.CornellBox(),
+	demo.CornellBox(),
 	//demo.Bunny(),
 	//demo.Dragon(),
-	//demo.Sponza(),
+	//demo.SponzaSun(),
 	//demo.Buddha(),
 	//demo.Hairball(),
-	//demo.Sibenik(),
-	//demo.Breakfast(),
-	demo.Fireplace(),
+	//demo.SibenikSun(),
+	//demo.BreakfastSun(),
+	//demo.FireplaceSun(),
 	//demo.SanMiguelSun(),
 }
 
 func main() {
-	//world := demo.CornellBox()
-	//world := demo.Bunny()
-	//world := demo.Dragon()
-	//world := demo.SanMiguel()
-	//world := demo.Sponza()
-	//world := demo.Buddha()
-	//world := demo.Hairball()
-	//world := demo.Sibenik()
-	//world := demo.Breakfast()
-	//world := demo.Fireplace()
-
 	for _, world := range worlds {
 		camera := NewDefaultCamera(ASPECT_RATIO, FOV)
-		bvh := world.Scene.CompileLBVH()
+		bvh := world.Scene.CompilePHR(0.55, 9, 4)
 		renderer := NewDefaultRenderer(bvh, camera)
+
+		// Sky miss shader adds ambient light to all misses and adds a "sky" color interpolation
 		renderer.Miss = SkyMissShader
-		renderer.Spp = 1000
-		renderer.MaxDepth = 10
+
+		// Specify samples-per-pixel and max depth
+		renderer.Spp = 100
+		renderer.MaxDepth = 5
 		renderer.Verbose = true
+
+		// Render all view points
 		for i, view := range world.ViewPoints {
 			camera.SetTransformation(view)
+
 			buff := NewPxlBufferAR(RESOLUTION, ASPECT_RATIO)
 			renderer.RenderToBuffer(buff)
+
+			// Write image to specified path
 			path := fmt.Sprintf("%v_%v.png", world.Name, i)
 			f, err := os.Create(path)
 			if err != nil {
@@ -59,7 +58,6 @@ func main() {
 			img := buff.ToImage()
 			png.Encode(f, img)
 			fmt.Printf("Written image to " + path + "\n")
-
 		}
 	}
 }

@@ -11,6 +11,10 @@ import (
 
 type Renderer interface {
 	RenderToBuffer(buff Buffer)
+	GetCamera() *Camera
+
+	SetBvh(BVH)
+	GetBvh() BVH
 }
 
 type ImageRenderer struct {
@@ -28,7 +32,7 @@ type ImageRenderer struct {
 func NewDefaultRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 	return &ImageRenderer{
 		NumCPU:   runtime.GOMAXPROCS(0),
-		MaxDepth: 2,
+		MaxDepth: 5,
 		Bvh:      bvh,
 		Spp:      300,
 		Camera:   camera,
@@ -39,15 +43,15 @@ func NewDefaultRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 	}
 }
 
-func NewNoLightRenderer(bvh BVH, camera *Camera) *ImageRenderer {
+func NewRealtimeRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 	return &ImageRenderer{
 		NumCPU:   runtime.GOMAXPROCS(0),
-		MaxDepth: 2,
+		MaxDepth: 5,
 		Bvh:      bvh,
-		Spp:      300,
+		Spp:      1,
 		Camera:   camera,
 		Closest:  DefaultClosestHitShader,
-		Miss:     WhiteMissShader,
+		Miss:     SkyMissShader,
 		Sampling: RandomSampling,
 		Verbose:  false,
 	}
@@ -72,13 +76,25 @@ type context struct {
 	depth int
 }
 
+func (r *ImageRenderer) GetCamera() *Camera {
+	return r.Camera
+}
+
+func (r *ImageRenderer) SetBvh(bvh BVH) {
+	r.Bvh = bvh
+}
+
+func (r *ImageRenderer) GetBvh() BVH {
+	return r.Bvh
+}
+
 func (r *ImageRenderer) RenderToBuffer(buff Buffer) {
 	r.log("Started rendering\n")
-	jobs := make(chan int, buff.h())
+	jobs := make(chan int, buff.Height())
 	wg := sync.WaitGroup{}
 	wg.Add(r.NumCPU)
-	width := buff.w()
-	height := buff.h()
+	width := buff.Width()
+	height := buff.Height()
 	for i := 0; i < r.NumCPU; i++ {
 		go func(c context, w, h int) {
 			ray := ray{
@@ -136,12 +152,24 @@ func NewHeatMapRenderer(bvh BVH, camera *Camera, threshold int) *HeatMapRenderer
 	}
 }
 
+func (r *HeatMapRenderer) GetCamera() *Camera {
+	return r.Camera
+}
+
+func (r *HeatMapRenderer) SetBvh(bvh BVH) {
+	r.Bvh = bvh
+}
+
+func (r *HeatMapRenderer) GetBvh() BVH {
+	return r.Bvh
+}
+
 func (r *HeatMapRenderer) RenderToBuffer(buff Buffer) {
-	jobs := make(chan int, buff.h())
+	jobs := make(chan int, buff.Height())
 	wg := sync.WaitGroup{}
 	wg.Add(r.NumCPU)
-	width := buff.w()
-	height := buff.h()
+	width := buff.Width()
+	height := buff.Height()
 	for i := 0; i < r.NumCPU; i++ {
 		go func(c context, w, h int) {
 			ray := ray{

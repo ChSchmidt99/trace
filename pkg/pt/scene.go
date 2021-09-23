@@ -57,22 +57,26 @@ func (n *SceneNode) Add(node *SceneNode) {
 }
 
 func (n *SceneNode) ScaleUniform(factor float64) {
-	n.transform(scaleUniform(factor))
+	n.transform(ScaleUniform(factor))
 }
 
 func (n *SceneNode) Scale(x, y, z float64) {
-	n.transform(scale(x, y, z))
+	n.transform(Scale(x, y, z))
 }
 
 func (n *SceneNode) Translate(x, y, z float64) {
-	n.transform(translate(x, y, z))
+	n.transform(Translate(x, y, z))
 }
 
 func (n *SceneNode) Rotate(dir Vector3, angle float64) {
-	n.transform(rotate(dir, angle))
+	n.transform(Rotate(dir, angle))
 }
 
-func (n *SceneNode) ResetTransformation(dir Vector3, angle float64) {
+func (n *SceneNode) SetTransformation(t Matrix4) {
+	n.transformation = t
+}
+
+func (n *SceneNode) ResetTransformation() {
 	n.transformation = IdentityMatrix()
 }
 
