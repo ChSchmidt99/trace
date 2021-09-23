@@ -154,10 +154,10 @@ func IdentityMatrix() Matrix4 {
 
 func (m Matrix4) Multiply(v Vector4) Vector4 {
 	return Vector4{
-		x: m[0]*v.x + m[1]*v.x + m[2]*v.x + m[3]*v.x,
-		y: m[4]*v.y + m[5]*v.y + m[6]*v.y + m[7]*v.y,
-		z: m[8]*v.z + m[9]*v.z + m[10]*v.z + m[11]*v.z,
-		w: m[12]*v.w + m[13]*v.w + m[14]*v.w + m[15]*v.w,
+		x: m[0]*v.x + m[1]*v.y + m[2]*v.z + m[3]*v.w,
+		y: m[4]*v.x + m[5]*v.y + m[6]*v.z + m[7]*v.w,
+		z: m[8]*v.x + m[9]*v.y + m[10]*v.z + m[11]*v.w,
+		w: m[12]*v.x + m[13]*v.y + m[14]*v.z + m[15]*v.w,
 	}
 }
 

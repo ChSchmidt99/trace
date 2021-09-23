@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-//TODO: Parse .mat file
 func ParseFromPath(path string) Geometry {
 	objFile, err := os.Open(path)
 	if err != nil {

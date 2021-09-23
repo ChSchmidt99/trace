@@ -17,7 +17,6 @@ type intersectable interface {
 	bounding() aabb
 }
 
-// TODO: Add rectangle
 type primitive interface {
 	intersectable
 	transformed(Matrix4) primitive
@@ -41,8 +40,10 @@ func NewSphere(center Vector3, radius float64) *Sphere {
 }
 
 func (s *Sphere) transformed(t Matrix4) primitive {
-	// TODO: Transform point on Sphere and calc new Radius
-	return NewSphere(s.center.ToPoint().Transformed(t).ToV3(), s.radius)
+	pointOnSphere := s.center.Add(NewVector3(s.radius, 0, 0))
+	newCenter := s.center.ToPoint().Transformed(t).ToV3()
+	newRadius := pointOnSphere.ToPoint().Transformed(t).ToV3().Length()
+	return NewSphere(newCenter, newRadius)
 }
 
 func (s *Sphere) bounding() aabb {

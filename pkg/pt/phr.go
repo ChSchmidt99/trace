@@ -126,7 +126,6 @@ func (p *PhrBuilder) buildSubTree(job phrJob, wg *sync.WaitGroup) {
 		}
 	}
 
-	// TODO: Synchronization issue with small scenes!
 	wg.Add(len(cuts) - 1)
 
 	// Create a new BVH branch
@@ -193,6 +192,7 @@ func (p *PhrBuilder) BuildWithCost(auxilaryBVH BVH) (BVH, int) {
 	}, int(cost)
 }
 
+// Duplicate of buildSubTreeCost, only used for benchmarking
 func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int64) {
 	if len(job.cut.nodes) <= 1 {
 		job.parent.addChild(job.cut.nodes[0], job.childIndex)
@@ -230,7 +230,6 @@ func (p *PhrBuilder) buildSubTreeCost(job phrJob, wg *sync.WaitGroup, cost *int6
 			}
 		}
 	}
-	// TODO: Synchronization issue with small scenes!
 	wg.Add(len(cuts) - 1)
 
 	// Create a new BVH branch
@@ -366,7 +365,6 @@ type phrCut struct {
 
 type SplitFunction func(phrCut) (*phrCut, *phrCut)
 
-// TODO: Implement Bucket SAH and RDH?
 func SweepSAH(cut phrCut) (l *phrCut, r *phrCut) {
 	// Sort along x and y axis using two separate slices
 	sort.SliceStable(cut.nodes, func(i, j int) bool {

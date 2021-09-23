@@ -2,10 +2,8 @@ package pt
 
 import (
 	"fmt"
-	"image/png"
 	"math"
 	"math/rand"
-	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -48,7 +46,7 @@ func NewNoLightRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 		Bvh:      bvh,
 		Spp:      300,
 		Camera:   camera,
-		Closest:  UnlitClosestHitShader,
+		Closest:  DefaultClosestHitShader,
 		Miss:     WhiteMissShader,
 		Sampling: RandomSampling,
 		Verbose:  false,
@@ -62,7 +60,7 @@ func NewBenchmarkRenderer(bvh BVH, camera *Camera) *ImageRenderer {
 		Bvh:      bvh,
 		Spp:      1,
 		Camera:   camera,
-		Closest:  UnlitClosestHitShader,
+		Closest:  DefaultClosestHitShader,
 		Miss:     WhiteMissShader,
 		Sampling: RandomSampling,
 		Verbose:  false,
@@ -111,63 +109,8 @@ func (r *ImageRenderer) RenderToBuffer(buff Buffer) {
 	}
 	close(jobs)
 	wg.Wait()
+	r.log("Finished Rendering\n")
 }
-
-// TODO: Refactor
-func (r *ImageRenderer) RenderImageIncremental(path string, resolution int, aspectRatio float64, storeInterval int) {
-	f, err := os.Create(path)
-	if err != nil {
-		panic(err)
-	}
-	r.log("Started rendering\n")
-	buff := NewPxlBufferAR(resolution, aspectRatio)
-	jobs := make(chan int, buff.h())
-	wg := sync.WaitGroup{}
-	wg.Add(r.NumCPU)
-	width := buff.w()
-	height := buff.h()
-	for i := 0; i < r.NumCPU; i++ {
-		go func(c context, w, h int) {
-			ray := ray{
-				origin: r.Camera.orientation.origin,
-			}
-			hit := hit{}
-			for y := range jobs {
-				for x := 0; x < w; x++ {
-					u, v := r.Sampling(c, x, y, w, h)
-					r.Camera.castRayReuse(u, v, &ray)
-					if r.Bvh.intersected(ray, 0.001, math.Inf(1), &hit) {
-						buff.addSample(x, y, r.Closest(r, c, ray, &hit))
-					} else {
-						buff.addSample(x, y, r.Miss(r, c, ray))
-					}
-				}
-			}
-			wg.Done()
-		}(context{
-			rand: rand.New(rand.NewSource(time.Now().UnixNano())),
-		}, width, height)
-	}
-	for i := 1; i <= r.Spp; i++ {
-		for y := 0; y < height; y++ {
-			jobs <- y
-		}
-		r.log("Finished pass %v\n", i)
-		// Store to image
-		if i%storeInterval == 0 {
-			img := buff.ToImage()
-			png.Encode(f, img)
-			fmt.Printf("Written image to " + path + "\n")
-		}
-	}
-	close(jobs)
-	wg.Wait()
-	img := buff.ToImage()
-	png.Encode(f, img)
-	fmt.Printf("Finished Rendering to: " + path + "\n")
-}
-
-// TODO: Add Render function for image (RenderIncremental) that saves to image in interval and Renderer that finishes each pixel with all spp at once
 
 func (r *ImageRenderer) log(message string, a ...interface{}) {
 	if r.Verbose {
@@ -249,23 +192,6 @@ func DefaultClosestHitShader(renderer *ImageRenderer, c context, r ray, h *hit) 
 		}
 	} else {
 		return light
-	}
-}
-
-// TODO: Needed?
-func UnlitClosestHitShader(renderer *ImageRenderer, c context, r ray, h *hit) Color {
-	if c.depth > renderer.MaxDepth {
-		return NewColor(0, 0, 0)
-	}
-	c.depth++
-	if b, attenuation := h.material.scatter(&r, h, c.rand); b {
-		if renderer.Bvh.intersected(r, 0.0001, math.Inf(1), h) {
-			return renderer.Closest(renderer, c, r, h).Blend(attenuation)
-		} else {
-			return renderer.Miss(renderer, c, r).Blend(attenuation)
-		}
-	} else {
-		return attenuation
 	}
 }
 

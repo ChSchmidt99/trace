@@ -92,14 +92,16 @@ func (n *SceneNode) collectTracablesRaw() []tracable {
 	return out
 }
 
-// TODO: Make Multi Thread
-// TODO: Check if zero alloc with accumulator is more efficient
 // Returns all Tracables transformed by t
 func (n *SceneNode) collectTracables(t Matrix4) []tracable {
 	t = n.transformation.MultiplyMatrix(t)
 	out := make([]tracable, 0)
 	if n.mesh != nil {
-		out = append(out, n.mesh.Transformed(t)...)
+		if n.transformation == IdentityMatrix() {
+			out = append(out, n.mesh.raw()...)
+		} else {
+			out = append(out, n.mesh.Transformed(t)...)
+		}
 	}
 	for _, child := range n.children {
 		out = append(out, child.collectTracables(t)...)
@@ -109,18 +111,15 @@ func (n *SceneNode) collectTracables(t Matrix4) []tracable {
 
 type Geometry []primitive
 
-// TODO: Does it make sense to have seperate transformation for mesh?
 type Mesh struct {
-	transformation Matrix4
-	geometry       Geometry
-	material       Material
+	geometry Geometry
+	material Material
 }
 
 func NewMesh(geometry Geometry, mat Material) *Mesh {
 	return &Mesh{
-		transformation: IdentityMatrix(),
-		geometry:       geometry,
-		material:       mat,
+		geometry: geometry,
+		material: mat,
 	}
 }
 
@@ -137,7 +136,6 @@ func (m Mesh) raw() []tracable {
 
 func (m Mesh) Transformed(t Matrix4) []tracable {
 	tracables := make([]tracable, len(m.geometry))
-	t = m.transformation.MultiplyMatrix(t)
 	for i, prim := range m.geometry {
 		tracables[i] = tracable{
 			prim: prim.transformed(t),
