@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added 
 - Frame Buffer 
+- Window creation using SDL2
+- Very primitive real-time controlls and dynamic scenes
 
 ### Changed 
 - Camera orientation can now be set on existing cameras
